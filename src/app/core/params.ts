@@ -1,6 +1,8 @@
 import type { Surface } from './enclosure';
 
 export type Hole = {
+  id: string;
+  name?: string;
   shape: 'circle' | 'square' | 'rectangle';
   diameter: number;
   width: number;
@@ -11,6 +13,8 @@ export type Hole = {
 };
 
 export type PCBMount = {
+  id: string,
+  name?: string;
   surface: Surface;
   x: number;
   y: number;
@@ -19,13 +23,45 @@ export type PCBMount = {
   screwDiameter: number;
 };
 
+export type CableClamp = {
+  id: string;
+  name?: string;
+  x: number;
+  y: number;
+  length: number;
+  wallHeight: number;
+  wallThickness: number;
+  mountScrewDiameter: number;
+  mountOuterDiameter: number;
+  mountHeight: number;
+  rotation: number;
+  topHeight: number;
+  topScrewDiameter: number;
+  surface: Surface;
+};
+
 export type InternalWall = {
+  id: string;
+  name?: string;
   x: number;
   y: number;
   height: number;
   length: number;
   thickness: number;
   rotation: number;
+  surface: Surface;
+};
+
+export type PCB = {
+  id: string;
+  x: number;
+  y: number;
+  z: number;
+  width: number;
+  length: number;
+  surface: Surface;
+  screwOffset: number;
+  enabled: boolean;
 };
 
 export type Params = {
@@ -48,12 +84,18 @@ export type Params = {
   holes: Hole[];
   pcbMounts: PCBMount[];
   internalWalls: InternalWall[];
+  cableClamps: CableClamp[];
   wallMounts: boolean;
   wallMountCount: number;
   wallMountScrewDiameter: number;
   lidScrews: boolean;
   lidScrewDiameter: number;
   baseLidScrewDiameter: number;
+  sunkenLidScrewHeads: boolean;
+  lidScrewHeadDiameter: number;
+  lidScrewHeadDepth: number;
+  boreHoleClearance: number;
+  pcb: PCB;
 };
 
 export const DEFAULT_PARAMS: Params = {
@@ -75,6 +117,7 @@ export const DEFAULT_PARAMS: Params = {
   cornerRadius: 3,
   holes: [
     {
+      id: 'hole-1',
       shape: 'circle',
       surface: 'front',
       diameter: 12.5,
@@ -84,6 +127,7 @@ export const DEFAULT_PARAMS: Params = {
       y: 0,
     },
     {
+      id: 'hole-2',
       shape: 'square',
       surface: 'left',
       diameter: 10,
@@ -93,6 +137,7 @@ export const DEFAULT_PARAMS: Params = {
       y: 0,
     },
     {
+      id: 'hole-3',
       shape: 'rectangle',
       surface: 'back',
       width: 40,
@@ -102,6 +147,7 @@ export const DEFAULT_PARAMS: Params = {
       y: 0,
     },
     {
+      id: 'hole-4',
       shape: 'square',
       surface: 'right',
       width: 12.5,
@@ -111,6 +157,7 @@ export const DEFAULT_PARAMS: Params = {
       y: 0,
     },
     {
+      id: 'hole-5',
       shape: 'square',
       surface: 'top',
       width: 30,
@@ -122,6 +169,7 @@ export const DEFAULT_PARAMS: Params = {
   ],
   pcbMounts: [
     {
+      id: 'mount1',
       surface: 'bottom',
       x: 30,
       y: 24,
@@ -130,6 +178,7 @@ export const DEFAULT_PARAMS: Params = {
       screwDiameter: 2,
     },
     {
+      id: 'mount2',
       surface: 'bottom',
       x: -30,
       y: 24,
@@ -138,6 +187,7 @@ export const DEFAULT_PARAMS: Params = {
       screwDiameter: 2,
     },
     {
+      id: 'mount3',
       surface: 'bottom',
       x: -30,
       y: -24,
@@ -146,6 +196,7 @@ export const DEFAULT_PARAMS: Params = {
       screwDiameter: 2,
     },
     {
+      id: 'mount4',
       surface: 'bottom',
       x: 30,
       y: -24,
@@ -156,20 +207,55 @@ export const DEFAULT_PARAMS: Params = {
   ],
   internalWalls: [
     {
+      id: 'wall1',
       x: 0,
       y: 0,
       height: 10,
       length: 25,
       thickness: 2,
       rotation: 0,
+      surface: 'bottom',
+    },
+  ],
+  cableClamps: [
+    {
+      id: 'clamp-1',
+      name: 'Clamp 1',
+      x: 40,
+      y: 0,
+      length: 15,
+      wallHeight: 7,
+      wallThickness: 5,
+      mountScrewDiameter: 2,
+      mountOuterDiameter: 6,
+      mountHeight: 10,
+      rotation: 0,
+      topHeight: 2,
+      topScrewDiameter: 2.5,
+      surface: 'bottom',
     },
   ],
   wallMounts: true,
   wallMountCount: 4,
   wallMountScrewDiameter: 3.98,
   lidScrews: true,
-  lidScrewDiameter: 2.98,
-  baseLidScrewDiameter: 2.88,
+  lidScrewDiameter: 2.5,
+  baseLidScrewDiameter: 2,
+  sunkenLidScrewHeads: false,
+  lidScrewHeadDiameter: 4,
+  lidScrewHeadDepth: 3,
+  boreHoleClearance: 0.04,
+  pcb: {
+    id: 'pcb',
+    enabled: true,
+    x: 0,
+    y: 0,
+    z: 10,
+    width: 30,
+    length: 40,
+    surface: 'bottom',
+    screwOffset: 2,
+  }
 };
 
 export const cloneParams = (params: Params): Params => {

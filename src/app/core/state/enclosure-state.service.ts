@@ -1,12 +1,17 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { DEFAULT_PARAMS, Params, cloneParams } from '../params';
 
+export type FeatureTarget =
+  | { type: 'hole' | 'pcbMount' | 'internalWall' | 'cableClamp'; index: number }
+  | { type: 'base' | 'lid' | 'lidInsert' | 'waterproof' | 'wallMount' | 'screwHole' | 'pcb' };
+
 @Injectable({ providedIn: 'root' })
 export class EnclosureStateService {
   private readonly defaults = cloneParams(DEFAULT_PARAMS);
 
   readonly params = signal<Params>(cloneParams(this.defaults));
   readonly loading = signal(false);
+  readonly selectedFeature = signal<FeatureTarget | null>(null);
 
   readonly holeCount = computed(() => this.params().holes.length);
 
@@ -35,6 +40,7 @@ export class EnclosureStateService {
   resetToDefaults(): void {
     this.params.set(cloneParams(this.defaults));
     this.loading.set(false);
+    this.selectedFeature.set(null);
   }
 
   resetToSimpleEnclosure(): void {
@@ -47,5 +53,10 @@ export class EnclosureStateService {
       wallMounts: false,
       lidScrews: false,
     }));
+    this.selectedFeature.set(null);
+  }
+
+  selectFeature(feature: FeatureTarget | null): void {
+    this.selectedFeature.set(feature);
   }
 }

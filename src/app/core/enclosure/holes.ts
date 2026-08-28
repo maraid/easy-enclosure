@@ -1,4 +1,4 @@
-import { rotate, translate } from '@jscad/modeling/src/operations/transforms';
+import { rotate, translate, mirror } from '@jscad/modeling/src/operations/transforms';
 import { degToRad } from '@jscad/modeling/src/utils';
 import { cuboid, cylinder } from '@jscad/modeling/src/primitives';
 import { union } from '@jscad/modeling/src/operations/booleans';
@@ -7,6 +7,9 @@ import { Params } from '../params';
 import { Geom3 } from '@jscad/modeling/src/geometries/types';
 import { Vec3 } from '@jscad/modeling/src/maths/types';
 import { Surface, SURFACES } from '.';
+
+import { Hole } from '../params';
+import { Feature } from './feature';
 
 const TOP_HOLE_DEPTH_TOLERANCE = 0.2;
 
@@ -27,6 +30,15 @@ export const holes = (
   } = params;
 
   let result: Geom3[] = [];
+
+  const holeCount = params.holes.filter((v, i) => {
+    return surfacesFilter.includes(v.surface);
+  }).length;
+
+  if (holeCount == 0) {
+    return union(result);
+  }
+
   SURFACES.forEach((surface) => {
     const surfaceHoles = holeParams.filter((spec) => {
       if (surfacesFilter.includes(surface) && spec.surface === surface) {
@@ -127,5 +139,21 @@ export const holes = (
     });
   });
 
-  return union(result);
+  return translate([-width / 2, -length / 2, 0], union(result));
 };
+
+export const hole = (params: Params, hole: Hole): Geom3 => {
+  return holes({ ...params, holes: [hole] }, [hole.surface]);
+}
+
+export const holeFeature = (params: Params, hole: Hole): Feature => {
+  const { length, width } = params;
+  const geometry = holes({ ...params, holes: [hole] }, [hole.surface]);
+  return {
+    geometry,
+    surface: 'plane',
+    x: 0,
+    y: 0,
+  };
+}
+

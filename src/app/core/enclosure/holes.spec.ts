@@ -9,6 +9,7 @@ describe('holes', () => {
     params.insertHeight = 2;
     params.holes = [
       {
+        id: 'holetest',
         shape: 'circle',
         surface: 'top',
         diameter: 10,

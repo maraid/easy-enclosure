@@ -4,7 +4,10 @@ import { rotateZ, translate } from '@jscad/modeling/src/operations/transforms';
 import { cuboid, cylinder } from '@jscad/modeling/src/primitives';
 import { degToRad } from '@jscad/modeling/src/utils';
 
-export const roundedCube = (l: number, w: number, h: number, r = 8, s = 100) => {
+import { Geom3 } from '@jscad/modeling/src/geometries/types';
+
+
+export const roundedCube = (l: number, w: number, h: number, r = 8, s = 100): Geom3 => {
   const c = cylinder({
     height: h,
     radius: r,
@@ -20,16 +23,25 @@ export const roundedCube = (l: number, w: number, h: number, r = 8, s = 100) => 
   );
 };
 
+export const centeredRoundedCube = (l: number, w: number, h: number, r = 8, s = 100) => {
+  return translate([-l / 2, -w / 2, 0], roundedCube(l, w, h, r, s));
+};
+
 export const roundedFrame = (l: number, w: number, h: number, t: number, r = 8, s = 100) => {
   const outer = roundedCube(l, w, h, r, s);
   const inner = roundedCube(l - t * 2, w - t * 2, h, r, s);
   return subtract(outer, translate([t, t, 0], inner));
 };
 
-export const hollowRoundCube = (l: number, w: number, h: number, t: number, r = 8, s = 100) => {
+export const hollowRoundCube = (l: number, w: number, h: number, t: number, floor: number, r = 8, s = 100) => {
   const outer = roundedCube(l, w, h, r, s);
   const inner = roundedCube(l - t * 2, w - t * 2, h, r, s);
-  return subtract(outer, translate([t, t, t], inner));
+  return subtract(outer, translate([t, t, floor], inner));
+};
+
+
+export const centeredHollowRoundCube = (l: number, w: number, h: number, t: number, floor: number, r = 8, s = 100) => {
+  return translate([-l / 2, -w / 2, 0], hollowRoundCube(l, w, h, t, floor, r, s));
 };
 
 const roundedCorner = (r: number, h: number, s = 100) => {
@@ -39,6 +51,8 @@ const roundedCorner = (r: number, h: number, s = 100) => {
     translate([r * 2, 0, 0], cuboid({ size: [r * 2, r * 2, h] })),
   );
 };
+
+
 
 export const clover = (l: number, w: number, h: number, r = 8, s = 100) => {
   const cornersRemoved = subtract(
@@ -67,3 +81,7 @@ export const cloverFrame = (l: number, w: number, h: number, t: number, r = 8, s
   const inner = clover(l - t * 2, w - t * 2, h, r, s);
   return subtract(outer, translate([t, t, 0], inner));
 };
+
+export const centerGeom = (l: number, w: number, h: number, geom: Geom3) => {
+  return translate([-l / 2, -w / 2, -h / 2], geom);
+}

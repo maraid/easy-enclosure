@@ -42,7 +42,11 @@ export class SidebarComponent {
 
     let screwToScrew: { width: number; length: number } | null = null;
     if (params.lidScrews) {
-      const diameterMax = Math.max(params.baseLidScrewDiameter, params.lidScrewDiameter);
+      const diameterMax = Math.max(
+        params.baseLidScrewDiameter,
+        params.lidScrewDiameter,
+        params.sunkenLidScrewHeads ? params.lidScrewHeadDiameter : 0,
+      );
       const offset = diameterMax / 2 + params.cornerRadius / 4 + params.wall / 2;
       screwToScrew = {
         width: Math.max(0, params.width - offset * 2),

@@ -3,380 +3,318 @@
     START FROM SCRATCH
   </button>
 
-  <div class="accordian" [class.active]="activeTab() === 1">
-    <p class="accordian-header" (click)="setActiveTab(1)">
+  <div id="definition-base" class="accordian" [class.active]="activeTab() === 'generalTab'">
+    <p class="accordian-header" (click)="setActiveTab('generalTab')">
       General
-      <span class="accordian-icon">{{ activeTab() === 1 ? '-' : '+' }}</span>
+      <span class="accordian-icon">{{ activeTab() === 'generalTab' ? '-' : '+' }}</span>
     </p>
     <div class="accordian-body">
       <div class="input-group">
         <label>Length</label>
-        <input
-          type="number"
-          min="1"
-          [value]="params().length"
-          (keydown.enter)="$any($event.target).blur()"
-          (blur)="setNumberParam('length', $any($event.target).value)"
-        />
+        <input type="number" min="1" [value]="params().length" (keydown.enter)="$any($event.target).blur()"
+          (blur)="setNumberParam('length', $any($event.target).value)" />
       </div>
       <div class="input-group">
         <label>Width</label>
-        <input
-          type="number"
-          min="1"
-          [value]="params().width"
-          (keydown.enter)="$any($event.target).blur()"
-          (blur)="setNumberParam('width', $any($event.target).value)"
-        />
+        <input type="number" min="1" [value]="params().width" (keydown.enter)="$any($event.target).blur()"
+          (blur)="setNumberParam('width', $any($event.target).value)" />
       </div>
       <div class="input-group">
         <label>Height</label>
-        <input
-          type="number"
-          min="1"
-          [value]="params().height"
-          (keydown.enter)="$any($event.target).blur()"
-          (blur)="setNumberParam('height', $any($event.target).value)"
-        />
+        <input type="number" min="1" [value]="params().height" (keydown.enter)="$any($event.target).blur()"
+          (blur)="setNumberParam('height', $any($event.target).value)" />
       </div>
       <div class="input-group">
         <label>Floor Thickness</label>
-        <input
-          type="number"
-          min="1"
-          [value]="params().floor"
-          (keydown.enter)="$any($event.target).blur()"
-          (blur)="setNumberParam('floor', $any($event.target).value)"
-        />
+        <input type="number" min="1" [value]="params().floor" (keydown.enter)="$any($event.target).blur()"
+          (blur)="setNumberParam('floor', $any($event.target).value)" />
       </div>
       <div class="input-group">
         <label>Wall Thickness</label>
-        <input
-          type="number"
-          min="1"
-          [value]="params().wall"
-          (keydown.enter)="$any($event.target).blur()"
-          (blur)="setNumberParam('wall', $any($event.target).value)"
-        />
+        <input type="number" min="1" [value]="params().wall" (keydown.enter)="$any($event.target).blur()"
+          (blur)="setNumberParam('wall', $any($event.target).value)" />
       </div>
       <div class="input-group">
         <label>Lid Thickness</label>
-        <input
-          type="number"
-          min="1"
-          [value]="params().roof"
-          (keydown.enter)="$any($event.target).blur()"
-          (blur)="setNumberParam('roof', $any($event.target).value)"
-        />
+        <input type="number" min="1" [value]="params().roof" (keydown.enter)="$any($event.target).blur()"
+          (blur)="setNumberParam('roof', $any($event.target).value)" />
       </div>
       <div class="input-group">
         <label>Corner Radius</label>
-        <input
-          type="number"
-          min="1"
-          [value]="params().cornerRadius"
-          (keydown.enter)="$any($event.target).blur()"
-          (blur)="setNumberParam('cornerRadius', $any($event.target).value)"
-        />
+        <input type="number" min="1" [value]="params().cornerRadius" (keydown.enter)="$any($event.target).blur()"
+          (blur)="setNumberParam('cornerRadius', $any($event.target).value)" />
       </div>
     </div>
   </div>
 
-  <div class="accordian" [class.active]="activeTab() === 2">
-    <p class="accordian-header" (click)="setActiveTab(2)">
+  <div id="definition-lid" class="accordian" [class.active]="activeTab() === 'lidInsertTab'">
+    <p class="accordian-header" (click)="setActiveTab('lidInsertTab')">
       Lid Insert
-      <span class="accordian-icon">{{ activeTab() === 2 ? '-' : '+' }}</span>
+      <span class="accordian-icon">{{ activeTab() === 'lidInsertTab' ? '-' : '+' }}</span>
     </p>
     <div class="accordian-body">
       <div class="input-group">
         <label>Insert Thickness</label>
-        <input
-          type="number"
-          min="1"
-          step="0.01"
-          [value]="params().insertThickness"
+        <input type="number" min="1" step="0.01" [value]="params().insertThickness"
           (keydown.enter)="$any($event.target).blur()"
-          (blur)="setNumberParam('insertThickness', $any($event.target).value)"
-        />
+          (blur)="setNumberParam('insertThickness', $any($event.target).value)" />
       </div>
       <div class="input-group">
         <label>Insert Height</label>
-        <input
-          type="number"
-          min="1"
-          step="0.01"
-          [value]="params().insertHeight"
+        <input type="number" min="1" step="0.01" [value]="params().insertHeight"
           (keydown.enter)="$any($event.target).blur()"
-          (blur)="setNumberParam('insertHeight', $any($event.target).value)"
-        />
+          (blur)="setNumberParam('insertHeight', $any($event.target).value)" />
       </div>
       <div class="input-group">
         <label>Insert Clearance</label>
-        <input
-          type="number"
-          min="0.01"
-          step="0.01"
-          [value]="params().insertClearance"
+        <input type="number" min="0.01" step="0.01" [value]="params().insertClearance"
           (keydown.enter)="$any($event.target).blur()"
-          (blur)="setNumberParam('insertClearance', $any($event.target).value)"
-        />
+          (blur)="setNumberParam('insertClearance', $any($event.target).value)" />
       </div>
     </div>
   </div>
 
-  <div class="accordian" [class.active]="activeTab() === 3">
-    <p class="accordian-header" (click)="setActiveTab(3)">
+  <div class="accordian" [class.active]="activeTab() === 'holesTab'">
+    <p class="accordian-header" (click)="setActiveTab('holesTab')">
       Holes
-      <span class="accordian-icon">{{ activeTab() === 3 ? '-' : '+' }}</span>
+      <span class="accordian-icon">{{ activeTab() === 'holesTab' ? '-' : '+' }}</span>
     </p>
     <div class="accordian-body">
-      @for (hole of params().holes; track $index) {
-        <div class="sub-params">
-          <button class="remove-btn" type="button" (click)="removeHole($index)">X</button>
-          <p>
-            <b>Hole {{ $index + 1 }}</b>
-          </p>
-
-          <div class="input-group">
-            <label>Shape</label>
-            <select
-              [value]="hole.shape"
-              (change)="updateHole($index, { shape: $any($event.target).value })"
-            >
-              <option value="circle">Circle</option>
-              <option value="square">Square</option>
-              <option value="rectangle">Rectangle</option>
-            </select>
-          </div>
-
-          <div class="input-group">
-            <label>Surface</label>
-            <select
-              [value]="hole.surface"
-              (change)="updateHole($index, { surface: $any($event.target).value })"
-            >
-              @for (surface of surfaces; track surface) {
-                <option [value]="surface" [selected]="surface === hole.surface">
-                  {{ surfaceLabel(surface) }}
-                </option>
-              }
-            </select>
-          </div>
-
-          <div class="input-group">
-            <label>X</label>
-            <input
-              type="number"
-              [value]="hole.x"
-              (keydown.enter)="$any($event.target).blur()"
-              (blur)="updateHole($index, { x: +$any($event.target).value })"
-            />
-          </div>
-
-          <div class="input-group">
-            <label>Y</label>
-            <input
-              type="number"
-              [value]="hole.y"
-              (keydown.enter)="$any($event.target).blur()"
-              (blur)="updateHole($index, { y: +$any($event.target).value })"
-            />
-          </div>
-
-          @if (hole.shape === 'rectangle' || hole.shape === 'square') {
-            <div class="input-group">
-              <label>Width</label>
-              <input
-                type="number"
-                [value]="hole.width"
-                (keydown.enter)="$any($event.target).blur()"
-                (blur)="updateHole($index, { width: +$any($event.target).value })"
-              />
-            </div>
+      @for (hole of params().holes; track hole.id) {
+      <div class="sub-params" [id]="featureId('hole', hole.id)" [class.selected-feature]="isSelected('hole', hole.id)">
+        <div class="component-header">
+          @if (isRenaming('hole', hole.id)) {
+          <input [id]="renameInputId('hole', hole.id)" class="component-name-input" type="text"
+            [value]="displayName(hole.name, 'Hole ' + ($index + 1))"
+            [attr.size]="nameInputSize(hole.name, 'Hole ' + ($index + 1))"
+            (keydown.enter)="finishRenaming('hole', hole.id, $any($event.target).value)"
+            (blur)="finishRenaming('hole', hole.id, $any($event.target).value)" />
+          } @else {
+          <b class="component-name" title="Double-click to rename" (dblclick)="startRenaming('hole', hole.id)">
+            {{ displayName(hole.name, 'Hole ' + ($index + 1)) }}
+          </b>
           }
-
-          @if (hole.shape === 'rectangle') {
-            <div class="input-group">
-              <label>Length</label>
-              <input
-                type="number"
-                [value]="hole.length"
-                (keydown.enter)="$any($event.target).blur()"
-                (blur)="updateHole($index, { length: +$any($event.target).value })"
-              />
-            </div>
-          }
-
-          @if (hole.shape === 'circle') {
-            <div class="input-group">
-              <label>Diameter</label>
-              <input
-                type="number"
-                [value]="hole.diameter"
-                (keydown.enter)="$any($event.target).blur()"
-                (blur)="updateHole($index, { diameter: +$any($event.target).value })"
-              />
-            </div>
-          }
+          <button class="copy-btn" type="button" title="Duplicate component" aria-label="Duplicate component"
+            (click)="copyHole(hole.id)">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="8" y="8" width="11" height="11" rx="1" />
+              <path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" />
+            </svg>
+          </button>
+          <button class="remove-btn" type="button" (click)="removeHole(hole.id)">X</button>
         </div>
+
+        <div class="input-group">
+          <label>Shape</label>
+          <select [value]="hole.shape" (change)="updateHole(hole.id, { shape: $any($event.target).value })">
+            <option value="circle">Circle</option>
+            <option value="square">Square</option>
+            <option value="rectangle">Rectangle</option>
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label>Surface</label>
+          <select [value]="hole.surface" (change)="updateHole(hole.id, { surface: $any($event.target).value })">
+            @for (surface of surfaces; track surface) {
+            <option [value]="surface" [selected]="surface === hole.surface">
+              {{ surfaceLabel(surface) }}
+            </option>
+            }
+          </select>
+        </div>
+
+        <div class="input-group">
+          <label>X</label>
+          <input type="number" [value]="hole.x" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateHole(hole.id, { x: +$any($event.target).value })" />
+        </div>
+
+        <div class="input-group">
+          <label>Y</label>
+          <input type="number" [value]="hole.y" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateHole(hole.id, { y: +$any($event.target).value })" />
+        </div>
+
+        @if (hole.shape === 'rectangle' || hole.shape === 'square') {
+        <div class="input-group">
+          <label>Width</label>
+          <input type="number" [value]="hole.width" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateHole(hole.id, { width: +$any($event.target).value })" />
+        </div>
+        }
+
+        @if (hole.shape === 'rectangle') {
+        <div class="input-group">
+          <label>Length</label>
+          <input type="number" [value]="hole.length" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateHole(hole.id, { length: +$any($event.target).value })" />
+        </div>
+        }
+
+        @if (hole.shape === 'circle') {
+        <div class="input-group">
+          <label>Diameter</label>
+          <input type="number" [value]="hole.diameter" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateHole(hole.id, { diameter: +$any($event.target).value })" />
+        </div>
+        }
+      </div>
       }
 
       <button class="add-btn" type="button" (click)="addHole()">Add Hole</button>
     </div>
   </div>
 
-  <div class="accordian" [class.active]="activeTab() === 4">
-    <p class="accordian-header" (click)="setActiveTab(4)">
+  <div class="accordian" [class.active]="activeTab() === 'pcbMountsTab'">
+    <p class="accordian-header" (click)="setActiveTab('pcbMountsTab')">
       PCB Mounts
-      <span class="accordian-icon">{{ activeTab() === 4 ? '-' : '+' }}</span>
+      <span class="accordian-icon">{{ activeTab() === 'pcbMountsTab' ? '-' : '+' }}</span>
     </p>
     <div class="accordian-body">
-      @for (mount of params().pcbMounts; track $index) {
-        <div class="sub-params">
-          <button class="remove-btn" type="button" (click)="removePcbMount($index)">X</button>
-          <p>
-            <b>Mount {{ $index + 1 }}</b>
-          </p>
-
-          <div class="input-group">
-            <label>Surface</label>
-            <select
-              [value]="mount.surface || 'bottom'"
-              (change)="updatePcbMount($index, { surface: $any($event.target).value })"
-            >
-              @for (surface of surfaces; track surface) {
-                <option [value]="surface" [selected]="surface === (mount.surface || 'bottom')">
-                  {{ surfaceLabel(surface) }}
-                </option>
-              }
-            </select>
-          </div>
-          <div class="input-group">
-            <label>X</label>
-            <input
-              type="number"
-              [value]="mount.x"
-              (keydown.enter)="$any($event.target).blur()"
-              (blur)="updatePcbMount($index, { x: +$any($event.target).value })"
-            />
-          </div>
-          <div class="input-group">
-            <label>Y</label>
-            <input
-              type="number"
-              [value]="mount.y"
-              (keydown.enter)="$any($event.target).blur()"
-              (blur)="updatePcbMount($index, { y: +$any($event.target).value })"
-            />
-          </div>
-          <div class="input-group">
-            <label>Height</label>
-            <input
-              type="number"
-              [value]="mount.height"
-              (keydown.enter)="$any($event.target).blur()"
-              (blur)="updatePcbMount($index, { height: +$any($event.target).value })"
-            />
-          </div>
-          <div class="input-group">
-            <label>Outer Diameter</label>
-            <input
-              type="number"
-              [value]="mount.outerDiameter"
-              (keydown.enter)="$any($event.target).blur()"
-              (blur)="updatePcbMount($index, { outerDiameter: +$any($event.target).value })"
-            />
-          </div>
-          <div class="input-group">
-            <label>Screw Diameter</label>
-            <input
-              type="number"
-              [value]="mount.screwDiameter"
-              (keydown.enter)="$any($event.target).blur()"
-              (blur)="updatePcbMount($index, { screwDiameter: +$any($event.target).value })"
-            />
-          </div>
+      @for (mount of params().pcbMounts; track mount.id) {
+      <div class="sub-params" [id]="featureId('pcbMount', mount.id)"
+        [class.selected-feature]="isSelected('pcbMount', mount.id)">
+        <div class="component-header">
+          @if (isRenaming('pcbMount', mount.id)) {
+          <input [id]="renameInputId('pcbMount', mount.id)" class="component-name-input" type="text"
+            [value]="displayName(mount.name, 'Mount ' + ($index + 1))"
+            [attr.size]="nameInputSize(mount.name, 'Mount ' + ($index + 1))"
+            (keydown.enter)="finishRenaming('pcbMount', mount.id, $any($event.target).value)"
+            (blur)="finishRenaming('pcbMount', mount.id, $any($event.target).value)" />
+          } @else {
+          <b class="component-name" title="Double-click to rename" (dblclick)="startRenaming('pcbMount', mount.id)">
+            {{ displayName(mount.name, 'Mount ' + ($index + 1)) }}
+          </b>
+          }
+          <button class="copy-btn" type="button" title="Duplicate component" aria-label="Duplicate component"
+            (click)="copyPcbMount(mount.id)">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="8" y="8" width="11" height="11" rx="1" />
+              <path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" />
+            </svg>
+          </button>
+          <button class="remove-btn" type="button" (click)="removePcbMount(mount.id)">X</button>
         </div>
+
+        <div class="input-group">
+          <label>Surface</label>
+          <select [value]="mount.surface || 'bottom'"
+            (change)="updatePcbMount(mount.id, { surface: $any($event.target).value })">
+            @for (surface of surfaces; track surface) {
+            <option [value]="surface" [selected]="surface === (mount.surface || 'bottom')">
+              {{ surfaceLabel(surface) }}
+            </option>
+            }
+          </select>
+        </div>
+        <div class="input-group">
+          <label>X</label>
+          <input type="number" [value]="mount.x" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updatePcbMount(mount.id, { x: +$any($event.target).value })" />
+        </div>
+        <div class="input-group">
+          <label>Y</label>
+          <input type="number" [value]="mount.y" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updatePcbMount(mount.id, { y: +$any($event.target).value })" />
+        </div>
+        <div class="input-group">
+          <label>Height</label>
+          <input type="number" [value]="mount.height" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updatePcbMount(mount.id, { height: +$any($event.target).value })" />
+        </div>
+        <div class="input-group">
+          <label>Outer Diameter</label>
+          <input type="number" [value]="mount.outerDiameter" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updatePcbMount(mount.id, { outerDiameter: +$any($event.target).value })" />
+        </div>
+        <div class="input-group">
+          <label>Screw Diameter</label>
+          <input type="number" [value]="mount.screwDiameter" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updatePcbMount(mount.id, { screwDiameter: +$any($event.target).value })" />
+        </div>
+      </div>
       }
       <button type="button" class="add-btn" (click)="addPcbMount()">ADD NEW MOUNT</button>
     </div>
   </div>
 
-  <div class="accordian" [class.active]="activeTab() === 5">
-    <p class="accordian-header" (click)="setActiveTab(5)">
+  <div class="accordian" [class.active]="activeTab() === 'internalWallsTab'">
+    <p class="accordian-header" (click)="setActiveTab('internalWallsTab')">
       Internal Walls
-      <span class="accordian-icon">{{ activeTab() === 5 ? '-' : '+' }}</span>
+      <span class="accordian-icon">{{ activeTab() === 'internalWallsTab' ? '-' : '+' }}</span>
     </p>
     <div class="accordian-body">
-      @for (wallItem of params().internalWalls; track $index) {
-        <div class="sub-params">
-          <button class="remove-btn" type="button" (click)="removeInternalWall($index)">X</button>
-          <p>
-            <b>Internal Wall {{ $index + 1 }}</b>
-          </p>
-
-          <div class="input-group">
-            <label>X</label>
-            <input
-              type="number"
-              [value]="wallItem.x"
-              (keydown.enter)="$any($event.target).blur()"
-              (blur)="updateInternalWall($index, { x: +$any($event.target).value })"
-            />
-          </div>
-          <div class="input-group">
-            <label>Y</label>
-            <input
-              type="number"
-              [value]="wallItem.y"
-              (keydown.enter)="$any($event.target).blur()"
-              (blur)="updateInternalWall($index, { y: +$any($event.target).value })"
-            />
-          </div>
-          <div class="input-group">
-            <label>Height</label>
-            <input
-              type="number"
-              min="0.1"
-              step="0.1"
-              [value]="wallItem.height"
-              (keydown.enter)="$any($event.target).blur()"
-              (blur)="updateInternalWall($index, { height: +$any($event.target).value })"
-            />
-          </div>
-          <div class="input-group">
-            <label>Length</label>
-            <input
-              type="number"
-              min="0.1"
-              step="0.1"
-              [value]="wallItem.length"
-              (keydown.enter)="$any($event.target).blur()"
-              (blur)="updateInternalWall($index, { length: +$any($event.target).value })"
-            />
-          </div>
-          <div class="input-group">
-            <label>Thickness</label>
-            <input
-              type="number"
-              min="0.1"
-              step="0.1"
-              [value]="wallItem.thickness"
-              (keydown.enter)="$any($event.target).blur()"
-              (blur)="updateInternalWall($index, { thickness: +$any($event.target).value })"
-            />
-          </div>
-          <div class="input-group">
-            <label>Rotation</label>
-            <input
-              type="number"
-              step="1"
-              [value]="wallItem.rotation"
-              (keydown.enter)="$any($event.target).blur()"
-              (blur)="updateInternalWall($index, { rotation: +$any($event.target).value })"
-            />
-          </div>
+      @for (wallItem of params().internalWalls; track wallItem.id) {
+      <div class="sub-params" [id]="featureId('internalWall', wallItem.id)"
+        [class.selected-feature]="isSelected('internalWall', wallItem.id)">
+        <div class="component-header">
+          @if (isRenaming('internalWall', wallItem.id)) {
+          <input [id]="renameInputId('internalWall', wallItem.id)" class="component-name-input" type="text"
+            [value]="displayName(wallItem.name, 'Internal Wall ' + ($index + 1))"
+            [attr.size]="nameInputSize(wallItem.name, 'Internal Wall ' + ($index + 1))"
+            (keydown.enter)="finishRenaming('internalWall', wallItem.id, $any($event.target).value)"
+            (blur)="finishRenaming('internalWall', wallItem.id, $any($event.target).value)" />
+          } @else {
+          <b class="component-name" title="Double-click to rename"
+            (dblclick)="startRenaming('internalWall', wallItem.id)">
+            {{ displayName(wallItem.name, 'Internal Wall ' + ($index + 1)) }}
+          </b>
+          }
+          <button class="copy-btn" type="button" title="Duplicate component" aria-label="Duplicate component"
+            (click)="copyInternalWall(wallItem.id)">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="8" y="8" width="11" height="11" rx="1" />
+              <path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" />
+            </svg>
+          </button>
+          <button class="remove-btn" type="button" (click)="removeInternalWall(wallItem.id)">X</button>
         </div>
+        <div class="input-group">
+          <label>Surface</label>
+          <select [value]="wallItem.surface || 'bottom'"
+            (change)="updateInternalWall(wallItem.id, { surface: $any($event.target).value })">
+            @for (surface of surfaces; track surface) {
+            <option [value]="surface" [selected]="surface === (wallItem.surface || 'bottom')">
+              {{ surfaceLabel(surface) }}
+            </option>
+            }
+          </select>
+        </div>
+        <div class="input-group">
+          <label>X</label>
+          <input type="number" [value]="wallItem.x" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateInternalWall(wallItem.id, { x: +$any($event.target).value })" />
+        </div>
+        <div class="input-group">
+          <label>Y</label>
+          <input type="number" [value]="wallItem.y" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateInternalWall(wallItem.id, { y: +$any($event.target).value })" />
+        </div>
+        <div class="input-group">
+          <label>Height</label>
+          <input type="number" min="0.1" step="0.1" [value]="wallItem.height"
+            (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateInternalWall(wallItem.id, { height: +$any($event.target).value })" />
+        </div>
+        <div class="input-group">
+          <label>Length</label>
+          <input type="number" min="0.1" step="0.1" [value]="wallItem.length"
+            (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateInternalWall(wallItem.id, { length: +$any($event.target).value })" />
+        </div>
+        <div class="input-group">
+          <label>Thickness</label>
+          <input type="number" min="0.1" step="0.1" [value]="wallItem.thickness"
+            (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateInternalWall(wallItem.id, { thickness: +$any($event.target).value })" />
+        </div>
+        <div class="input-group">
+          <label>Rotation</label>
+          <input type="number" step="1" [value]="wallItem.rotation" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateInternalWall(wallItem.id, { rotation: +$any($event.target).value })" />
+        </div>
+      </div>
       }
       <button type="button" class="add-btn" (click)="addInternalWall()">
         ADD NEW INTERNAL WALL
@@ -384,146 +322,275 @@
     </div>
   </div>
 
-  <div class="accordian" [class.active]="activeTab() === 6">
-    <p class="accordian-header" (click)="setActiveTab(6)">
+  <div class="accordian" [class.active]="activeTab() === 'cableClampsTab'">
+    <p class="accordian-header" (click)="setActiveTab('cableClampsTab')">
+      Cable Clamps
+      <span class="accordian-icon">{{ activeTab() === 'cableClampsTab' ? '-' : '+' }}</span>
+    </p>
+    <div class="accordian-body">
+      @for (clamp of params().cableClamps; track clamp.id) {
+      <div class="sub-params" [id]="featureId('cableClamp', clamp.id)"
+        [class.selected-feature]="isSelected('cableClamp', clamp.id)">
+        <div class="component-header">
+          @if (isRenaming('cableClamp', clamp.id)) {
+          <input [id]="renameInputId('cableClamp', clamp.id)" class="component-name-input" type="text"
+            [value]="displayName(clamp.name, 'Clamp ' + ($index + 1))"
+            [attr.size]="nameInputSize(clamp.name, 'Clamp ' + ($index + 1))"
+            (keydown.enter)="finishRenaming('cableClamp', clamp.id, $any($event.target).value)"
+            (blur)="finishRenaming('cableClamp', clamp.id, $any($event.target).value)" />
+          } @else {
+          <b class="component-name" title="Double-click to rename" (dblclick)="startRenaming('cableClamp', clamp.id)">
+            {{ displayName(clamp.name, 'Clamp ' + ($index + 1)) }}
+          </b>
+          }
+          <button class="copy-btn" type="button" title="Duplicate component" aria-label="Duplicate component"
+            (click)="copyCableClamp(clamp.id)">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <rect x="8" y="8" width="11" height="11" rx="1" />
+              <path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" />
+            </svg>
+          </button>
+          <button class="remove-btn" type="button" (click)="removeCableClamp(clamp.id)">X</button>
+        </div>
+        <div class="input-group">
+          <label>Surface</label>
+          <select [value]="clamp.surface || 'bottom'"
+            (change)="updateCableClamp(clamp.id, { surface: $any($event.target).value })">
+            @for (surface of surfaces; track surface) {
+            <option [value]="surface" [selected]="surface === (clamp.surface || 'bottom')">
+              {{ surfaceLabel(surface) }}
+            </option>
+            }
+          </select>
+        </div>
+        <div class="input-group">
+          <label>X</label>
+          <input type="number" [value]="clamp.x" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateCableClamp(clamp.id, { x: +$any($event.target).value })" />
+        </div>
+        <div class="input-group">
+          <label>Y</label>
+          <input type="number" [value]="clamp.y" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateCableClamp(clamp.id, { y: +$any($event.target).value })" />
+        </div>
+        <div class="input-group">
+          <label>Length</label>
+          <input type="number" [value]="clamp.length" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateCableClamp(clamp.id, { length: +$any($event.target).value })" />
+        </div>
+        <div class="input-group">
+          <label>Wall Height</label>
+          <input type="number" [value]="clamp.wallHeight" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateCableClamp(clamp.id, { wallHeight: +$any($event.target).value })" />
+        </div>
+        <div class="input-group">
+          <label>Wall Thickness</label>
+          <input type="number" [value]="clamp.wallThickness" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateCableClamp(clamp.id, { wallThickness: +$any($event.target).value })" />
+        </div>
+        <div class="input-group">
+          <label>Mount Screw Diameter</label>
+          <input type="number" [value]="clamp.mountScrewDiameter" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateCableClamp(clamp.id, { mountScrewDiameter: +$any($event.target).value })" />
+        </div>
+        <div class="input-group">
+          <label>Mount Outer Diameter</label>
+          <input type="number" [value]="clamp.mountOuterDiameter" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateCableClamp(clamp.id, { mountOuterDiameter: +$any($event.target).value })" />
+        </div>
+        <div class="input-group">
+          <label>Mount Height</label>
+          <input type="number" [value]="clamp.mountHeight" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateCableClamp(clamp.id, { mountHeight: +$any($event.target).value })" />
+        </div>
+        <div class="input-group">
+          <label>Rotation</label>
+          <input type="number" [value]="clamp.rotation" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateCableClamp(clamp.id, { rotation: +$any($event.target).value })" />
+        </div>
+        <div class="input-group">
+          <label>Top Height</label>
+          <input type="number" [value]="clamp.topHeight" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateCableClamp(clamp.id, { topHeight: +$any($event.target).value })" />
+        </div>
+        <div class="input-group">
+          <label>Top Screw Diameter</label>
+          <input type="number" [value]="clamp.topScrewDiameter" (keydown.enter)="$any($event.target).blur()"
+            (blur)="updateCableClamp(clamp.id, { topScrewDiameter: +$any($event.target).value })" />
+        </div>
+      </div>
+      }
+      <button type="button" class="add-btn" (click)="addCableClamp()">ADD NEW MOUNT</button>
+    </div>
+  </div>
+
+  <div id="definition-waterproof" class="accordian" [class.active]="activeTab() === 'waterproofingTab'">
+    <p class="accordian-header" (click)="setActiveTab('waterproofingTab')">
       Waterproofing
-      <span class="accordian-icon">{{ activeTab() === 6 ? '-' : '+' }}</span>
+      <span class="accordian-icon">{{ activeTab() === 'waterproofingTab' ? '-' : '+' }}</span>
     </p>
     <div class="accordian-body">
       <div class="input-group">
         <label>Waterproof</label>
-        <input
-          type="checkbox"
-          [checked]="params().waterProof"
-          (change)="onWaterproofChange($any($event.target).checked)"
-        />
+        <input type="checkbox" [checked]="params().waterProof"
+          (change)="onWaterproofChange($any($event.target).checked)" />
       </div>
 
       @if (params().waterProof) {
-        <div class="input-group">
-          <label>Seal Thickness</label>
-          <input
-            type="number"
-            min="1"
-            step="0.01"
-            [value]="params().sealThickness"
-            (keydown.enter)="$any($event.target).blur()"
-            (blur)="setNumberParam('sealThickness', $any($event.target).value)"
-          />
-        </div>
+      <div class="input-group">
+        <label>Seal Thickness</label>
+        <input type="number" min="1" step="0.01" [value]="params().sealThickness"
+          (keydown.enter)="$any($event.target).blur()"
+          (blur)="setNumberParam('sealThickness', $any($event.target).value)" />
+      </div>
       }
     </div>
   </div>
 
-  <div class="accordian" [class.active]="activeTab() === 7">
-    <p class="accordian-header" (click)="setActiveTab(7)">
+  <div class="accordian" [class.active]="activeTab() === 'lidScrewsTab'">
+    <p class="accordian-header" (click)="setActiveTab('lidScrewsTab')">
       Lid Screws
-      <span class="accordian-icon">{{ activeTab() === 7 ? '-' : '+' }}</span>
+      <span class="accordian-icon">{{ activeTab() === 'lidScrewsTab' ? '-' : '+' }}</span>
     </p>
     <div class="accordian-body">
       <div class="input-group">
         <label>Include Lid Screws</label>
-        <input
-          type="checkbox"
-          [checked]="params().lidScrews"
-          (change)="onLidScrewsChange($any($event.target).checked)"
-        />
+        <input type="checkbox" [checked]="params().lidScrews"
+          (change)="onLidScrewsChange($any($event.target).checked)" />
       </div>
 
       @if (params().lidScrews) {
-        <div class="input-group">
-          <label>Lid Hole Diameter</label>
-          <input
-            type="number"
-            min="1"
-            step="0.01"
-            [value]="params().lidScrewDiameter"
-            (keydown.enter)="$any($event.target).blur()"
-            (blur)="setNumberParam('lidScrewDiameter', $any($event.target).value)"
-          />
-        </div>
+      <div class="input-group">
+        <label>Lid Shaft Diameter</label>
+        <input type="number" min="1" step="0.01" [value]="params().lidScrewDiameter"
+          (keydown.enter)="$any($event.target).blur()"
+          (blur)="setNumberParam('lidScrewDiameter', $any($event.target).value)" />
+      </div>
 
-        <div class="input-group">
-          <label>Base Hole Diameter</label>
-          <input
-            type="number"
-            min="1"
-            step="0.01"
-            [value]="params().baseLidScrewDiameter"
-            (keydown.enter)="$any($event.target).blur()"
-            (blur)="setNumberParam('baseLidScrewDiameter', $any($event.target).value)"
-          />
-        </div>
+      <div class="input-group">
+        <label>Sunken Screw Heads</label>
+        <input type="checkbox" [checked]="params().sunkenLidScrewHeads"
+          (change)="setBooleanParam('sunkenLidScrewHeads', $any($event.target).checked)" />
+      </div>
+
+      @if (params().sunkenLidScrewHeads) {
+      <div class="input-group">
+        <label>Head Recess Diameter</label>
+        <input type="number" min="0.1" step="0.01" [value]="params().lidScrewHeadDiameter"
+          (keydown.enter)="$any($event.target).blur()"
+          (blur)="setNumberParam('lidScrewHeadDiameter', $any($event.target).value)" />
+      </div>
+
+      <div class="input-group">
+        <label>Head Recess Depth</label>
+        <input type="number" min="0.1" step="0.01" [value]="params().lidScrewHeadDepth"
+          (keydown.enter)="$any($event.target).blur()"
+          (blur)="setNumberParam('lidScrewHeadDepth', $any($event.target).value)" />
+      </div>
+
+      <div class="input-group">
+        <label>Base Hole Clearance</label>
+        <input type="number" min="0.01" step="0.01" [value]="params().boreHoleClearance"
+          (keydown.enter)="$any($event.target).blur()"
+          (blur)="setNumberParam('boreHoleClearance', $any($event.target).value)" />
+      </div>
+      }
+
+      <div class="input-group">
+        <label>Base Hole Diameter</label>
+        <input type="number" min="1" step="0.01" [value]="params().baseLidScrewDiameter"
+          (keydown.enter)="$any($event.target).blur()"
+          (blur)="setNumberParam('baseLidScrewDiameter', $any($event.target).value)" />
+      </div>
       }
     </div>
   </div>
 
-  <div class="accordian" [class.active]="activeTab() === 8">
-    <p class="accordian-header" (click)="setActiveTab(8)">
+  <div id="definition-wallMount" class="accordian" [class.active]="activeTab() === 'wallMountsTab'">
+    <p class="accordian-header" (click)="setActiveTab('wallMountsTab')">
       Wall Mounts
-      <span class="accordian-icon">{{ activeTab() === 8 ? '-' : '+' }}</span>
+      <span class="accordian-icon">{{ activeTab() === 'wallMountsTab' ? '-' : '+' }}</span>
     </p>
     <div class="accordian-body">
       <div class="input-group">
         <label>Wall Mounts</label>
-        <input
-          type="checkbox"
-          [checked]="params().wallMounts"
-          (change)="setBooleanParam('wallMounts', $any($event.target).checked)"
-        />
+        <input type="checkbox" [checked]="params().wallMounts"
+          (change)="setBooleanParam('wallMounts', $any($event.target).checked)" />
       </div>
 
       @if (params().wallMounts) {
-        <div class="input-group">
-          <label>Mount Count</label>
-          <select
-            [value]="params().wallMountCount"
-            (change)="setNumberParam('wallMountCount', $any($event.target).value)"
-          >
-            <option [value]="2">2</option>
-            <option [value]="4">4</option>
-          </select>
-        </div>
+      <div class="input-group">
+        <label>Mount Count</label>
+        <select [value]="params().wallMountCount"
+          (change)="setNumberParam('wallMountCount', $any($event.target).value)">
+          <option [value]="2">2</option>
+          <option [value]="4">4</option>
+        </select>
+      </div>
 
-        <div class="input-group">
-          <label>Screw Diameter</label>
-          <input
-            type="number"
-            min="1"
-            step="0.01"
-            [value]="params().wallMountScrewDiameter"
-            (keydown.enter)="$any($event.target).blur()"
-            (blur)="setNumberParam('wallMountScrewDiameter', $any($event.target).value)"
-          />
-        </div>
+      <div class="input-group">
+        <label>Screw Diameter</label>
+        <input type="number" min="1" step="0.01" [value]="params().wallMountScrewDiameter"
+          (keydown.enter)="$any($event.target).blur()"
+          (blur)="setNumberParam('wallMountScrewDiameter', $any($event.target).value)" />
+      </div>
       }
     </div>
   </div>
+  <div class="accordian" [class.active]="activeTab() === 'pcbTab'">
+    <p class="accordian-header" (click)="setActiveTab('pcbTab')">
+      PCB Overlay
+      <span class="accordian-icon">{{ activeTab() === 'pcbTab' ? '-' : '+' }}</span>
+    </p>
+    <div class="accordian-body">
+      <div class="input-group"> <label>Show</label> <input type="checkbox" [checked]="params().pcb.enabled"
+          (change)="updatePcb({ enabled: $any($event.target).checked })" /> </div>
+      <div class="input-group">
+        <label>Surface</label>
+        <select [value]="params().pcb.surface || 'bottom'" (change)="updatePcb({ surface: $any($event.target).value })">
+          @for (surface of surfaces; track surface) {
+          <option [value]="surface" [selected]="surface === (params().pcb.surface || 'bottom')">
+            {{ surfaceLabel(surface) }}
+          </option>
+          }
+        </select>
+      </div>
+      <div class="input-group"> <label>Width</label> <input type="number" min="1" step="1" [value]="params().pcb.width"
+          (keydown.enter)="$any($event.target).blur()" (blur)="updatePcb({ width: +$any($event.target).value })" />
+      </div>
+      <div class="input-group"> <label>Length</label> <input type="number" min="1" step="1"
+          [value]="params().pcb.length" (keydown.enter)="$any($event.target).blur()"
+          (blur)="updatePcb({ length: +$any($event.target).value })" />
+      </div>
+      <div class="input-group"> <label>X</label> <input type="number" [value]="params().pcb.x"
+          (keydown.enter)="$any($event.target).blur()" (blur)="updatePcb({ x: +$any($event.target).value })" /> </div>
+      <div class="input-group"> <label>Y</label> <input type="number" [value]="params().pcb.y"
+          (keydown.enter)="$any($event.target).blur()" (blur)="updatePcb({ y: +$any($event.target).value })" /> </div>
+      <div class="input-group"> <label>Offset</label> <input type="number" [value]="params().pcb.z"
+          (keydown.enter)="$any($event.target).blur()" (blur)="updatePcb({ z: +$any($event.target).value })" /> </div>
+      <div class="input-group"> <label>Screw Offset</label> <input type="number" [value]="params().pcb.screwOffset"
+          (keydown.enter)="$any($event.target).blur()"
+          (blur)="updatePcb({ screwOffset: +$any($event.target).value })" />
+      </div>
+    </div>
+  </div>
 
-  <div class="accordian" [class.active]="activeTab() === 9">
-    <p class="accordian-header" (click)="setActiveTab(9)">
+  <div class="accordian" [class.active]="activeTab() === 'gridTab'">
+    <p class="accordian-header" (click)="setActiveTab('gridTab')">
       Grid
-      <span class="accordian-icon">{{ activeTab() === 9 ? '-' : '+' }}</span>
+      <span class="accordian-icon">{{ activeTab() === 'gridTab' ? '-' : '+' }}</span>
     </p>
     <div class="accordian-body">
       <div class="input-group grid-toggle-group">
         <label>Show Grid</label>
-        <input
-          type="checkbox"
-          [checked]="params().showGrid"
-          (change)="setBooleanParam('showGrid', $any($event.target).checked)"
-        />
+        <input type="checkbox" [checked]="params().showGrid"
+          (change)="setBooleanParam('showGrid', $any($event.target).checked)" />
       </div>
       <div class="input-group input-group-full">
         <label>Grid Spacing (mm)</label>
-        <input
-          type="number"
-          min="1"
-          step="1"
-          [value]="params().gridSpacing"
+        <input type="number" min="1" step="1" [value]="params().gridSpacing"
           (keydown.enter)="$any($event.target).blur()"
-          (blur)="setNumberParam('gridSpacing', $any($event.target).value)"
-        />
+          (blur)="setNumberParam('gridSpacing', $any($event.target).value)" />
       </div>
     </div>
   </div>

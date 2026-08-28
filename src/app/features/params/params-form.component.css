@@ -182,20 +182,71 @@ label {
   font-size: 12px;
 }
 
-.sub-params p {
+.sub-params.selected-feature {
+  border-color: var(--ui-primary);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.component-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   margin: 8px 0 10px;
   color: var(--text-primary);
 }
 
-.remove-btn {
-  float: right;
-  margin: 8px;
+.component-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: text;
+}
+
+.component-name-input {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--ui-primary);
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+}
+
+.remove-btn,
+.copy-btn {
+  flex: 0 0 auto;
+  margin: 0;
   padding: 7px;
-  min-width: 34px;
   min-height: 34px;
   border-radius: 999px;
   color: #eef7ff;
   cursor: pointer;
+}
+
+.remove-btn {
+  min-width: 34px;
+}
+
+.copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: auto;
+  min-width: 34px;
+}
+
+.copy-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
 }
 
 .simple-reset-btn {

@@ -2,8 +2,11 @@ import { subtract, union } from '@jscad/modeling/src/operations/booleans';
 import { hull } from '@jscad/modeling/src/operations/hulls';
 import { mirrorX, rotateY, translate } from '@jscad/modeling/src/operations/transforms';
 import { cube, cuboid, cylinder } from '@jscad/modeling/src/primitives';
+import { Geom3 } from '@jscad/modeling/src/geometries/types';
+
 
 import { Params } from '../params';
+import { Feature } from './feature';
 
 const SCREWCLEARANCE = 2;
 const RIDGEWIDTH = 2;
@@ -39,28 +42,27 @@ export const flange = (screwDiameter: number) => {
     ),
   );
 
-  return subtract(
+  return translate([0, 0, outerWidth / 2], subtract(
     outer,
     translate([RIDGEWIDTH, 0, FLOOR], inner),
     translate([-outerWidth, 0, outerWidth], rotateY(45, cube({ size: outerWidth * 2 }))),
     translate([-outerWidth / 2, 0, 0], cylinder({ height: outerWidth, radius: screwDiameter / 2 })),
-  );
+  ));
 };
 
-export const flanges = (params: Params) => {
+export const flangeFeatures = (params: Params): Feature[] => {
   const { length, width, cornerRadius, wallMountScrewDiameter, wallMountCount } = params;
   const outerWidth = wallMountScrewDiameter + SCREWCLEARANCE * 2 + RIDGEWIDTH * 2;
   const cornerSpacing = cornerRadius + outerWidth / 2;
-  const z = outerWidth / 2;
 
   const yPositions = wallMountCount === 2 ? [length / 2] : [cornerSpacing, length - cornerSpacing];
 
-  const left = yPositions.map((y) =>
-    translate([-RIDGEWIDTH, y, z], flange(wallMountScrewDiameter)),
-  );
-  const right = yPositions.map((y) =>
-    translate([width + RIDGEWIDTH, y, z], mirrorX(flange(wallMountScrewDiameter))),
-  );
-
-  return union(...left, ...right);
+  const f = flange(wallMountScrewDiameter);
+  const recenterX = - width / 2;
+  const recenterY = - length / 2;
+  return yPositions.flatMap((y) => [
+    { geometry: f, surface: 'plane', x: recenterX - RIDGEWIDTH, y: recenterY + y, z: 0 },
+    { geometry: mirrorX(f), surface: 'plane', x: recenterX + width + RIDGEWIDTH, y: recenterY + y, z: 0 },
+  ]);
 };
+

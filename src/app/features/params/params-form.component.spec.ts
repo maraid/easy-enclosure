@@ -19,18 +19,18 @@ describe('ParamsFormComponent', () => {
   });
 
   it('toggles accordion tabs', () => {
-    component.setActiveTab(1);
-    expect(component.activeTab()).toBe(1);
+    component.setActiveTab('generalTab');
+    expect(component.activeTab()).toBe('generalTab');
 
-    component.setActiveTab(1);
+    component.setActiveTab('generalTab');
     expect(component.activeTab()).toBeNull();
   });
 
   it('resets to simple enclosure and opens general tab', () => {
-    component.setActiveTab(6);
+    component.setActiveTab('gridTab');
     component.resetToSimpleEnclosure();
 
-    expect(component.activeTab()).toBe(1);
+    expect(component.activeTab()).toBe('generalTab');
     expect(state.params().holes.length).toBe(0);
     expect(state.params().pcbMounts.length).toBe(0);
     expect(state.params().internalWalls.length).toBe(0);
@@ -50,6 +50,42 @@ describe('ParamsFormComponent', () => {
 
     component.removeHole(initialCount);
     expect(state.params().holes.length).toBe(initialCount);
+  });
+
+  it('copies items without sharing their values', () => {
+    component.copyHole(0);
+    const copiedHole = state.params().holes.at(-1)!;
+    expect(copiedHole).toEqual(state.params().holes[0]);
+
+    component.copyPcbMount(0);
+    const copiedMount = state.params().pcbMounts.at(-1)!;
+    expect(copiedMount).toEqual(state.params().pcbMounts[0]);
+
+    component.copyCableClamp(0);
+    const copiedClamp = state.params().cableClamps.at(-1)!;
+    expect(copiedClamp).toEqual(state.params().cableClamps[0]);
+
+    component.copyInternalWall(0);
+    const copiedWall = state.params().internalWalls.at(-1)!;
+    expect(copiedWall).toEqual(state.params().internalWalls[0]);
+
+    component.updateHole(state.params().holes[-1].id, { diameter: 99 });
+    expect(state.params().holes[0].diameter).not.toBe(99);
+  });
+
+  it('supports custom names for all component types', () => {
+    component.startRenaming('hole', 0);
+    expect(component.isRenaming('hole', 0)).toBeTrue();
+    component.finishRenaming('hole', 0, 'USB-C port');
+    component.finishRenaming('pcbMount', 0, 'Top-left standoff');
+    component.finishRenaming('internalWall', 0, 'Battery divider');
+
+    expect(state.params().holes[0].name).toBe('USB-C port');
+    expect(state.params().pcbMounts[0].name).toBe('Top-left standoff');
+    expect(state.params().internalWalls[0].name).toBe('Battery divider');
+    expect(component.displayName('', 'Hole 1')).toBe('Hole 1');
+    expect(component.nameInputSize('', 'Hole 1')).toBe(6);
+    expect(component.renamingItem()).toBeNull();
   });
 
   it('supports pcb mount surface updates', () => {
