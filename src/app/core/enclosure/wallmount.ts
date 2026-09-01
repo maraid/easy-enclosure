@@ -50,19 +50,30 @@ export const flange = (screwDiameter: number) => {
   ));
 };
 
-export const flangeFeatures = (params: Params): Feature[] => {
-  const { length, width, cornerRadius, wallMountScrewDiameter, wallMountCount } = params;
+export type FlangesGeometryParams = Pick<Params, 'length' | 'width' | 'cornerRadius' | 'wallMountScrewDiameter' | 'wallMountCount'>;
+
+export const flanges = ({
+  length,
+  width,
+  cornerRadius,
+  wallMountScrewDiameter,
+  wallMountCount,
+}: FlangesGeometryParams): Geom3 => {
   const outerWidth = wallMountScrewDiameter + SCREWCLEARANCE * 2 + RIDGEWIDTH * 2;
   const cornerSpacing = cornerRadius + outerWidth / 2;
 
   const yPositions = wallMountCount === 2 ? [length / 2] : [cornerSpacing, length - cornerSpacing];
 
   const f = flange(wallMountScrewDiameter);
-  const recenterX = - width / 2;
-  const recenterY = - length / 2;
-  return yPositions.flatMap((y) => [
-    { geometry: f, surface: 'plane', x: recenterX - RIDGEWIDTH, y: recenterY + y, z: 0 },
-    { geometry: mirrorX(f), surface: 'plane', x: recenterX + width + RIDGEWIDTH, y: recenterY + y, z: 0 },
+  const mirrored = mirrorX(f);
+  const recenterX = -width / 2;
+  const recenterY = -length / 2;
+
+  const pieces = yPositions.flatMap((y) => [
+    translate([recenterX - RIDGEWIDTH, recenterY + y, 0], f),
+    translate([recenterX + width + RIDGEWIDTH, recenterY + y, 0], mirrored),
   ]);
+
+  return pieces.length === 1 ? pieces[0] : union(pieces);
 };
 

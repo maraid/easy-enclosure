@@ -26,22 +26,13 @@ import {
 } from '@jscad/regl-renderer';
 import type { Entity } from '@jscad/regl-renderer/types/geometry-utils-V2/entity';
 
-import { baseFeature, base } from '../../core/enclosure/base';
-import { pcbFeature } from '../../core/enclosure/pcb';
-import { holeFeature } from '../../core/enclosure/holes';
-import { internalWallFeature, internalWalls } from '../../core/enclosure/internalwalls';
-import { cableClampFeature, spacedCableClampTop, cableClampTop } from '../../core/enclosure/clamp';
-import { lidFeature, lidWithHolesFeature, lidInsertFeature, lidWithHoles } from '../../core/enclosure/lid';
-import { lidScrewHoles, baseScrewHoles, screwBosses } from '../../core/enclosure/screws';
-import { pcbMountFeature } from '../../core/enclosure/pcbmount';
-import { waterProofSealFeature } from '../../core/enclosure/waterproofseal';
-import { flangeFeatures } from '../../core/enclosure/wallmount';
+// import { flangeFeatures } from '../../core/enclosure/wallmount';
 import type { Params } from '../../core/params';
 import { EnclosureStateService, FeatureTarget } from '../../core/state/enclosure-state.service';
 import { Feature } from "./../../core/enclosure/feature";
 import { Surface } from './../../core/enclosure/index';
-import { ObjectStore } from './renderer.store';
-import { xAtY } from '@jscad/modeling/src/maths/line2';
+import { FeatureStore } from './renderer.store';
+import { ObjectUpdater } from './renderer.update';
 
 
 const SPACING = 20;
@@ -361,6 +352,7 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
   private featureCandidates: FeatureCandidate[] = [];
   private hoveredFeature: FeatureTarget | null = null;
   private renderer: ((options?: RenderOptions) => void) | null = null;
+  private objects: ObjectUpdater = new ObjectUpdater();
   private animationFrame: number | null = null;
 
   private prevParams: Params | null = null;
@@ -375,7 +367,7 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
 
   readonly surfaceLabels = signal<SurfaceLabel[]>([]);
 
-  private store = new ObjectStore();
+  private store = new FeatureStore();
 
   constructor() {
     effect(() => {
@@ -1268,153 +1260,155 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
     this.featureCandidates = [];
     const pcb = params.pcb;
 
-    if (pcb.enabled) {
-      const geometryKey = `${pcb.width}|${pcb.length}|${pcb.screwOffset}|${pcb.surface}`;
+    this.objects.updateAll(params);
 
-      if (
-        !this.store.has(pcb.id) ||
-        this.pcbGeometryKey !== geometryKey
-      ) {
-        const feature = pcbFeature(params);
+    // if (pcb.enabled) {
+    //   const geometryKey = `${pcb.width}|${pcb.length}|${pcb.screwOffset}|${pcb.surface}`;
 
-        this.store.set(
-          pcb.id,
-          colorize([0.2, 0.6, 1.0, 0.5], feature.geometry),
-          feature.surface,
-          [pcb.x, pcb.y, pcb.z],
-        );
+    //   if (
+    //     !this.store.has(pcb.id) ||
+    //     this.pcbGeometryKey !== geometryKey
+    //   ) {
+    //     const feature = pcbFeature(params);
 
-        this.pcbGeometryKey = geometryKey;
-      } else {
-        this.store.setPosition(pcb.id, [pcb.x, pcb.y, pcb.z]);
-      }
+    //     this.store.set(
+    //       pcb.id,
+    //       colorize([0.2, 0.6, 1.0, 0.5], feature.geometry),
+    //       feature.surface,
+    //       [pcb.x, pcb.y, pcb.z],
+    //     );
 
-      const feature = this.store.getFeature(pcb.id);
+    //     this.pcbGeometryKey = geometryKey;
+    //   } else {
+    //     this.store.setPosition(pcb.id, [pcb.x, pcb.y, pcb.z]);
+    //   }
 
-      if (feature) {
-        this.pcbModel = this.place(feature, params);
-        this.pcbModelHighlight = this.createFeatureCandidate(
-          { type: 'pcb' },
-          this.pcbModel,
-        );
-      }
-    } else {
-      this.pcbModel = null;
-      this.pcbModelHighlight = null;
-    }
+    //   const feature = this.store.getFeature(pcb.id);
 
-    if (this.checkDeps(diff, baseDeps)) {
-      this.baseModel = this.place(baseFeature(params), params);
-      this.baseModelHighlight = this.createFeatureCandidate({ type: 'base' }, this.baseModel);
-      if (params.wallMounts) {
-        this.wallMountModel = this.place(flangeFeatures(params), params);
-        this.wallMountModelHighlight = this.createFeatureCandidate({ type: 'wallMount' }, this.wallMountModel);
-      } else {
-        this.wallMountModel = null;
-        this.wallMountModelHighlight = null;
-      }
-      params.holes.forEach((h, index) => {
-        if (h.surface !== 'top') {
-          this.holeModelHighlight.push(this.createFeatureCandidate(
-            { type: 'hole', index },
-            this.place(holeFeature(params, h), params),
-          ));
-        }
-      });
-      const lidHoles = lidScrewHoles(params);
-      const baseHoles = baseScrewHoles(params);
-      const lidBosses = screwBosses(params);
-      if (params.lidScrews && lidHoles && baseHoles) {
-        let h = union(
-          translate(this.lidOrigin, lidHoles),
-          translate(this.baseOrigin, baseHoles),
-        )
+    //   if (feature) {
+    //     this.pcbModel = this.place(feature, params);
+    //     this.pcbModelHighlight = this.createFeatureCandidate(
+    //       { type: 'pcb' },
+    //       this.pcbModel,
+    //     );
+    //   }
+    // } else {
+    //   this.pcbModel = null;
+    //   this.pcbModelHighlight = null;
+    // }
 
-        if (lidBosses) {
-          h = union(h, translate(this.lidOrigin, lidBosses));
-        }
-        this.screwHoleModelHighlight = this.createFeatureCandidate({ type: 'screwHole' }, h);
-      }
-    }
+    // if (this.checkDeps(diff, baseDeps)) {
+    //   // this.baseModel = this.place(baseFeature(params), params);
+    //   // this.baseModelHighlight = this.createFeatureCandidate({ type: 'base' }, this.baseModel);
+    //   if (params.wallMounts) {
+    //     this.wallMountModel = this.place(flangeFeatures(params), params);
+    //     this.wallMountModelHighlight = this.createFeatureCandidate({ type: 'wallMount' }, this.wallMountModel);
+    //   } else {
+    //     this.wallMountModel = null;
+    //     this.wallMountModelHighlight = null;
+    //   }
+    //   // params.holes.forEach((h, index) => {
+    //   //   if (h.surface !== 'top') {
+    //   //     this.holeModelHighlight.push(this.createFeatureCandidate(
+    //   // { type: 'hole', index },
+    //   //       this.place(holeFeature(params, h), params),
+    //   //     ));
+    //   //   }
+    //   // });
+    //   const lidHoles = lidScrewHoles(params);
+    //   const baseHoles = baseScrewHoles(params);
+    //   const lidBosses = screwBosses(params);
+    //   if (params.lidScrews && lidHoles && baseHoles) {
+    //     let h = union(
+    //       translate(this.lidOrigin, lidHoles),
+    //       translate(this.baseOrigin, baseHoles),
+    //     )
 
-    if (this.checkDeps(diff, lidDeps)) {
-      this.lidModel = translate(this.lidOrigin, this.place(lidFeature(params), params));
-      this.lidModelHighlight = this.createFeatureCandidate(
-        { type: 'lid' },
-        translate(this.lidOrigin, this.place(lidWithHolesFeature(params), params)));
-      this.lidInsertModelHighlight = this.createFeatureCandidate(
-        { type: 'lidInsert' },
-        translate(this.lidOrigin, this.place(lidInsertFeature(params), params)));
+    //     if (lidBosses) {
+    //       h = union(h, translate(this.lidOrigin, lidBosses));
+    //     }
+    //     this.screwHoleModelHighlight = this.createFeatureCandidate({ type: 'screwHole' }, h);
+    //   }
+    // }
 
-      params.holes.forEach((h, index) => {
-        if (h.surface === 'top') {
-          this.holeModelHighlight.push(this.createFeatureCandidate(
-            { type: 'hole', index },
-            translate(this.lidOrigin, this.place(holeFeature(params, h), params))),
-          );
-        }
-      });
-    }
+    // if (this.checkDeps(diff, lidDeps)) {
+    //   this.lidModel = translate(this.lidOrigin, this.place(lidFeature(params), params));
+    //   this.lidModelHighlight = this.createFeatureCandidate(
+    //     { type: 'lid' },
+    //     translate(this.lidOrigin, this.place(lidWithHolesFeature(params), params)));
+    //   this.lidInsertModelHighlight = this.createFeatureCandidate(
+    //     { type: 'lidInsert' },
+    //     translate(this.lidOrigin, this.place(lidInsertFeature(params), params)));
 
-    if (this.checkDeps(diff, sealDeps)) {
-      if (waterProof) {
-        this.sealModel = translate(this.sealOrigin, this.place(waterProofSealFeature(params), params));
-        this.sealModelHighlight = this.createFeatureCandidate({ type: 'waterproof' }, this.sealModel);
-      } else {
-        this.sealModel = null;
-        this.sealModelHighlight = null;
-      }
-    }
+    //   // params.holes.forEach((h, index) => {
+    //   //   if (h.surface === 'top') {
+    //   //     this.holeModelHighlight.push(this.createFeatureCandidate(
+    //   //       { type: 'hole', index },
+    //   //       translate(this.lidOrigin, this.place(holeFeature(params, h), params))),
+    //   //     );
+    //   //   }
+    //   // });
+    // }
 
-    if (this.checkDeps(diff, mountDeps)) {
-      const mounts: Geom3[] = [];
-      const highlights: FeatureCandidate[] = [];
-      params.pcbMounts.forEach((mount, index) => {
-        const m = this.place(pcbMountFeature(mount), params);
-        highlights.push(this.createFeatureCandidate({ type: 'pcbMount', index }, m));
-        mounts.push(m)
-      })
-      this.mountsModel = this.extractModel(mounts);
-      this.mountsModelHighlight = highlights;
-    }
+    // if (this.checkDeps(diff, sealDeps)) {
+    //   if (waterProof) {
+    //     this.sealModel = translate(this.sealOrigin, this.place(waterProofSealFeature(params), params));
+    //     this.sealModelHighlight = this.createFeatureCandidate({ type: 'waterproof' }, this.sealModel);
+    //   } else {
+    //     this.sealModel = null;
+    //     this.sealModelHighlight = null;
+    //   }
+    // }
 
-
-    if (this.checkDeps(diff, internalWallDeps)) {
-      const walls: Geom3[] = [];
-      const highlights: FeatureCandidate[] = [];
-      params.internalWalls.forEach((wall, index) => {
-        const w = this.place(internalWallFeature(wall), params)
-        walls.push(w);
-        highlights.push(this.createFeatureCandidate({ type: 'internalWall', index }, w));
-      });
-      this.internalWallsModel = this.extractModel(walls);
-      this.internalWallsModelHighlight = highlights;
-    }
+    // if (this.checkDeps(diff, mountDeps)) {
+    //   const mounts: Geom3[] = [];
+    //   const highlights: FeatureCandidate[] = [];
+    //   params.pcbMounts.forEach((mount, index) => {
+    //     const m = this.place(pcbMountFeature(mount), params);
+    //     highlights.push(this.createFeatureCandidate({ type: 'pcbMount', index }, m));
+    //     mounts.push(m)
+    //   })
+    //   this.mountsModel = this.extractModel(mounts);
+    //   this.mountsModelHighlight = highlights;
+    // }
 
 
-    if (this.checkDeps(diff, cableClampDeps)) {
-      const clamps: Geom3[] = [];
-      const highlights: FeatureCandidate[] = [];
-      const numOfClamps = params.cableClamps.length;
-      params.cableClamps.forEach((clamp, index) => {
-        const clampBase = this.place(cableClampFeature(clamp), params);
+    // if (this.checkDeps(diff, internalWallDeps)) {
+    //   const walls: Geom3[] = [];
+    //   const highlights: FeatureCandidate[] = [];
+    //   params.internalWalls.forEach((wall, index) => {
+    //     const w = this.place(internalWallFeature(wall), params)
+    //     walls.push(w);
+    //     // highlights.push(this.createFeatureCandidate({ type: 'internalWall', index }, w));
+    //   });
+    //   this.internalWallsModel = this.extractModel(walls);
+    //   this.internalWallsModelHighlight = highlights;
+    // }
 
-        let clampTop = spacedCableClampTop(clamp, SPACING, numOfClamps, index);
-        clampTop = translate(this.clampTopsOrigin, clampTop);
 
-        const clampPair = union(clampBase, clampTop);
-        clamps.push(clampPair);
+    // if (this.checkDeps(diff, cableClampDeps)) {
+    //   const clamps: Geom3[] = [];
+    //   const highlights: FeatureCandidate[] = [];
+    //   const numOfClamps = params.cableClamps.length;
+    //   params.cableClamps.forEach((clamp, index) => {
+    //     const clampBase = this.place(cableClampFeature(clamp), params);
 
-        highlights.push(this.createFeatureCandidate({ type: 'cableClamp', index }, clampPair));
-      });
-      this.cableClampsModel = this.extractModel(clamps);
-      this.cableClampsModelHighlight = highlights;
-    }
+    //     let clampTop = spacedCableClampTop(clamp, SPACING, numOfClamps, index);
+    //     clampTop = translate(this.clampTopsOrigin, clampTop);
+
+    //     const clampPair = union(clampBase, clampTop);
+    //     clamps.push(clampPair);
+
+    //     // highlights.push(this.createFeatureCandidate({ type: 'cableClamp', index }, clampPair));
+    //   });
+    //   this.cableClampsModel = this.extractModel(clamps);
+    //   this.cableClampsModelHighlight = highlights;
+    // }
 
     const newModels: Geom3[] = [];
-    if (this.lidModel) {
-      newModels.push(this.lidModel);
-    }
+    // if (this.lidModel) {
+    //   newModels.push(this.lidModel);
+    // }
     if (this.baseModel) {
       newModels.push(this.baseModel);
     }
@@ -1434,17 +1428,19 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
       newModels.push(this.cableClampsModel);
     }
 
+    newModels.push(...this.objects.getModels())
+
     if (newModels.length === 0) {
       return;
     }
 
     this.featureCandidates = [];
-    if (this.lidModelHighlight) {
-      this.featureCandidates.push(this.lidModelHighlight);
-    }
-    if (this.lidInsertModelHighlight) {
-      this.featureCandidates.push(this.lidInsertModelHighlight);
-    }
+    // if (this.lidModelHighlight) {
+    //   this.featureCandidates.push(this.lidModelHighlight);
+    // }
+    // if (this.lidInsertModelHighlight) {
+    //   this.featureCandidates.push(this.lidInsertModelHighlight);
+    // }
     if (this.screwHoleModelHighlight) {
       this.featureCandidates.push(this.screwHoleModelHighlight);
     }

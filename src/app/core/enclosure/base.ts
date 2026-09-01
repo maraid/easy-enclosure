@@ -1,8 +1,7 @@
 import { booleans } from '@jscad/modeling';
 import { Params } from '../params';
 
-import { holes } from './holes';
-import { clover, centeredHollowRoundCube, hollowRoundCube, roundedCube, centerGeom } from './utils';
+import { clover, centeredHollowRoundCube, roundedCube } from './utils';
 import { waterProofSealCutout } from './waterproofseal';
 import { baseScrewHoles } from './screws';
 import { Feature } from './feature';
@@ -86,10 +85,6 @@ export const base = (params: Params) => {
   const seal = waterProofSealCutout(params);
   if (seal) {
     subtracts.push(seal);
-  }
-  const baseHoles = holes(params);
-  if (baseHoles) {
-    subtracts.push(baseHoles);
   }
   if (subtracts.length) {
     return subtract(union(body), union(subtracts));

@@ -37,7 +37,7 @@ export const cableClamp = (
     rotation: number = 0): Geom3 => {
 
     const [mountOuter, mountInner] = clampMount(mountHeight, mountOuterDiameter, mountScrewDiameter);
-    const wall = internalWall(wallHeight, length, wallThickness);
+    const wall = internalWall({ height: wallHeight, length, thickness: wallThickness });
 
 
     const leftMountOuter = translate(
@@ -73,32 +73,6 @@ export const cableClamp = (
     );
     return rotateZ(degToRad(rotation), obj);
 };
-
-export const cableClampFeature = (clampParams: CableClamp): Feature => {
-    const {
-        length,
-        mountHeight,
-        mountOuterDiameter,
-        mountScrewDiameter,
-        wallHeight,
-        wallThickness,
-        rotation,
-        surface,
-        x,
-        y
-    } = clampParams;
-    const geometry = cableClamp(
-        length,
-        mountHeight,
-        mountOuterDiameter,
-        mountScrewDiameter,
-        wallHeight,
-        wallThickness,
-        rotation
-    );
-    return { geometry, surface, x, y };
-};
-
 
 
 export const cableClampTop = (clampParams: CableClamp): Geom3 => {

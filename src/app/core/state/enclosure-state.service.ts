@@ -2,7 +2,7 @@ import { Injectable, computed, signal } from '@angular/core';
 import { DEFAULT_PARAMS, Params, cloneParams } from '../params';
 
 export type FeatureTarget =
-  | { type: 'hole' | 'pcbMount' | 'internalWall' | 'cableClamp'; index: number }
+  | { type: 'hole' | 'pcbMount' | 'internalWall' | 'cableClamp'; id: string }
   | { type: 'base' | 'lid' | 'lidInsert' | 'waterproof' | 'wallMount' | 'screwHole' | 'pcb' };
 
 @Injectable({ providedIn: 'root' })

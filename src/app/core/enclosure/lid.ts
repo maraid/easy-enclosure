@@ -1,9 +1,9 @@
 import { booleans, transforms } from '@jscad/modeling';
 import { cloverFrame, centeredRoundedCube, roundedFrame } from './utils';
 
-import { Params } from '../params';
+import { Params, Hole } from '../params';
 import { subtract } from '@jscad/modeling/src/operations/booleans';
-import { holes } from './holes';
+// import { holes } from './holes';
 import { lidScrewHoles, screwBosses } from './screws';
 import { Feature } from './feature';
 
@@ -11,28 +11,28 @@ import { Feature } from './feature';
 const { union } = booleans;
 const { translate } = transforms;
 
-export const lidInsert = (params: Params) => {
-  const {
-    length,
-    width,
-    wall,
-    roof,
-    cornerRadius,
-    insertThickness,
-    insertHeight,
-    insertClearance,
-    baseLidScrewDiameter,
-    lidScrewDiameter,
-    sunkenLidScrewHeads,
-    lidScrewHeadDiameter,
-  } = params;
+export const lidInsert = ({
+  width,
+  length,
+  wall,
+  roof,
+  lidScrews,
+  cornerRadius,
+  insertThickness,
+  insertHeight,
+  insertClearance,
+  baseLidScrewDiameter,
+  lidScrewDiameter,
+  sunkenLidScrewHeads,
+  lidScrewHeadDiameter }: Params) => {
+
   const insertOrigin: [number, number, number] = [
     wall + insertClearance,
     wall + insertClearance,
-    roof,
+    0,
   ];
 
-  if (params.lidScrews) {
+  if (lidScrews) {
     const diameterMax = Math.max(
       baseLidScrewDiameter,
       lidScrewDiameter,
@@ -62,22 +62,71 @@ export const lidInsert = (params: Params) => {
   ));
 };
 
-export const lidWithHoles = (params: Params) => {
-  const {
-    length,
-    width,
-    roof,
-    cornerRadius,
-  } = params;
+export type LidWithHolesParams = {
+  width: number;
+  length: number;
+  roof: number;
+  wall: number;
+  cornerRadius: number;
+  lidScrews: boolean;
+  lidScrewDiameter: number;
+  sunkenLidScrewHeads: boolean;
+  lidScrewHeadDiameter: number;
+  lidScrewHeadDepth: number;
+  height: number;
+  insertHeight: number;
+  insertThickness: number;
+  insertClearance: number;
+  holes: Hole[];
+}
 
+
+export const lidWithHoles = ({
+  width,
+  length,
+  roof,
+  wall,
+  cornerRadius,
+  lidScrews,
+  lidScrewDiameter,
+  sunkenLidScrewHeads,
+  lidScrewHeadDiameter,
+  lidScrewHeadDepth,
+  height,
+  insertHeight,
+  insertThickness,
+  insertClearance,
+  holes: holeParams,
+}: LidWithHolesParams) => {
   const entities = [];
   const subtracts = [];
   entities.push(centeredRoundedCube(width, length, roof, cornerRadius));
-  const lidHoles = holes(params, ['top']);
-  if (lidHoles) {
-    subtracts.push(lidHoles);
-  }
-  const screwHoles = lidScrewHoles(params);
+  // const lidHoles = holes({
+  //   length,
+  //   width,
+  //   height,
+  //   roof,
+  //   wall,
+  //   insertHeight,
+  //   insertThickness,
+  //   insertClearance,
+  //   holes: holeParams
+  // }, ['top']);
+  // if (lidHoles) {
+  //   subtracts.push(lidHoles);
+  // }
+  const screwHoles = lidScrewHoles({
+    width,
+    length,
+    roof,
+    wall,
+    cornerRadius,
+    lidScrews,
+    lidScrewDiameter,
+    sunkenLidScrewHeads,
+    lidScrewHeadDiameter,
+    lidScrewHeadDepth,
+  });
   if (screwHoles) {
     subtracts.push(screwHoles);
   }
@@ -88,12 +137,12 @@ export const lidWithHoles = (params: Params) => {
 export const lid = (params: Params) => {
   const entities = [];
   entities.push(lidWithHoles(params));
-  entities.push(lidInsert(params));
-  const bosses = screwBosses(params);
+  // entities.push(lidInsert(params));
+  // const bosses = screwBosses(params);
   const screwHoles = lidScrewHoles(params);
-  if (bosses && screwHoles) {
-    entities.push(subtract(bosses, screwHoles));
-  }
+  // if (bosses && screwHoles) {
+  //   entities.push(subtract(bosses, screwHoles));
+  // }
   return union(entities);
 };
 

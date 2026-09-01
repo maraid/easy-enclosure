@@ -12,7 +12,6 @@ import { serialize } from '@jscad/stl-serializer';
 import { saveAs } from 'file-saver';
 
 import { base } from '../../core/enclosure/base';
-import { internalWalls } from '../../core/enclosure/internalwalls';
 import { lid } from '../../core/enclosure/lid';
 import { waterProofSeal } from '../../core/enclosure/waterproofseal';
 import type { Params } from '../../core/params';
@@ -99,10 +98,10 @@ export class ToolsComponent {
     //   baseParts.push(baseMounts);
     // }
 
-    const _internalWalls = internalWalls(currentParams)
-    if (_internalWalls) {
-      // baseParts.push(_internalWalls); TODO 
-    }
+    // const _internalWalls = internalWalls(currentParams)
+    // if (_internalWalls) {
+    //   // baseParts.push(_internalWalls); TODO 
+    // }
 
     // const _cableClamps = cableClamps(currentParams)
     // if (_cableClamps) {

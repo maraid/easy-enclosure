@@ -4,6 +4,7 @@ import { Surface } from '.';
 
 
 export type Feature = {
+    id?: string;
     geometry: Geom3;
     surface: Surface;
     x: number;

@@ -3,7 +3,6 @@ import { cloverFrame, centeredRoundedCube, roundedFrame } from './utils';
 
 import { Params, PCBMount } from '../params';
 import { subtract } from '@jscad/modeling/src/operations/booleans';
-import { holes } from './holes';
 import { lidScrewHoles, screwBosses } from './screws';
 import { Feature } from './feature';
 import { cuboid, cylinder } from '@jscad/modeling/src/primitives';
@@ -29,9 +28,7 @@ const perf = (): Geom3 => {
 
 
 
-const perfs = (board: PCB): Geom3 | null => {
-    const { length, width } = board;
-
+const perfs = (width: number, length: number): Geom3 | null => {
     const hole = perf();
     const holes: Geom3[] = [];
 
@@ -78,8 +75,7 @@ const screwHole = (): Geom3 => {
     })
 }
 
-const screwHoles = (board: PCB): Geom3 => {
-    const { screwOffset, width, length } = board;
+const screwHoles = (width: number, length: number, screwOffset: number): Geom3 => {
     const hole = screwHole();
     const edgeX = width / 2 - screwOffset;
     const edgeY = length / 2 - screwOffset;
@@ -91,21 +87,16 @@ const screwHoles = (board: PCB): Geom3 => {
     );
 };
 
-const pcb = (board: PCB) => {
+type PcbGeometryParams = Pick<PCB, 'width' | 'length' | 'screwOffset'>;
+
+export const pcb = ({ width, length, screwOffset }: PcbGeometryParams) => {
     let geometry = cuboid({
-        size: [board.width, board.length, HEIGHT],
+        size: [width, length, HEIGHT],
         center: [0, 0, HEIGHT / 2],
     });
-    const holes = perfs(board);
+    const holes = perfs(width, length);
     if (holes) {
         geometry = subtract(geometry, union(holes));
     }
-    return subtract(geometry, screwHoles(board));
-};
-
-export const pcbFeature = (params: Params): Feature => {
-    const { pcb: board } = params;
-    const { x, y, z, surface } = board;
-    const geometry = pcb(board);
-    return { geometry, surface, x, y, z };
-};
+    return subtract(geometry, screwHoles(width, length, screwOffset));
+}

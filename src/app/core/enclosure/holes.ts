@@ -13,147 +13,62 @@ import { Feature } from './feature';
 
 const TOP_HOLE_DEPTH_TOLERANCE = 0.2;
 
-export const holes = (
-  params: Params,
-  surfacesFilter: Surface[] = ['bottom', 'left', 'right', 'back', 'front'],
-) => {
-  const {
-    length,
-    width,
-    height,
+
+export const hole2 = (
+  {
+    floor,
     roof,
     wall,
     insertHeight,
     insertThickness,
-    insertClearance,
-    holes: holeParams,
-  } = params;
+    insertClearance
+  }: Params,
+  {
+    shape,
+    diameter,
+    width: holeWidth,
+    length: holeLength,
+    surface,
+  }: Hole,
+) => {
+  const wallThickness = insertThickness + insertClearance * 2 + wall * 2;
+  const lidThickness = roof + insertHeight + TOP_HOLE_DEPTH_TOLERANCE;
+  const bottomThickness = floor;
 
-  let result: Geom3[] = [];
-
-  const holeCount = params.holes.filter((v, i) => {
-    return surfacesFilter.includes(v.surface);
-  }).length;
-
-  if (holeCount == 0) {
-    return union(result);
+  let holeDepth = 0;
+  if (surface === 'top') {
+    holeDepth = lidThickness;
+  } else if (surface === 'bottom') {
+    holeDepth = bottomThickness;
+  } else {
+    holeDepth = wallThickness;
   }
 
-  SURFACES.forEach((surface) => {
-    const surfaceHoles = holeParams.filter((spec) => {
-      if (surfacesFilter.includes(surface) && spec.surface === surface) {
-        return spec;
-      } else {
-        return false;
-      }
-    });
-
-    surfaceHoles.forEach((hole, i) => {
-      let x: number;
-      let y: number;
-      let z: number;
-      let rot: Vec3;
-
-      const totalWallThickness = insertThickness + insertClearance * 2 + wall * 2;
-      let holeDepth = totalWallThickness;
-
-      if (surface === 'front') {
-        y = length - totalWallThickness / 2;
-        x = width / 2 - hole.y;
-        z = height / 2 + hole.x;
-        rot = [degToRad(90), 0, 0];
-      } else if (surface === 'right') {
-        x = totalWallThickness / 2;
-        y = length / 2 - hole.y;
-        z = height / 2 + hole.x;
-        if (hole.shape === 'circle') {
-          rot = [0, degToRad(90), 0];
-        } else {
-          rot = [degToRad(90), 0, degToRad(90)];
-        }
-      } else if (surface === 'back') {
-        y = totalWallThickness / 2;
-        x = width / 2 - hole.y;
-        z = height / 2 + hole.x;
-        rot = [degToRad(90), 0, 0];
-      } else if (surface === 'left') {
-        x = width - totalWallThickness / 2;
-        y = length / 2 - hole.y;
-        z = height / 2 + hole.x;
-        if (hole.shape === 'circle') {
-          rot = [0, degToRad(90), 0];
-        } else {
-          rot = [degToRad(90), 0, degToRad(90)];
-        }
-      } else if (surface === 'bottom' || surface === 'top') {
-        y = length / 2 - hole.x;
-        x = width / 2 - hole.y;
-        z = 0;
-        if (surface === 'top') {
-          holeDepth = roof + insertHeight + TOP_HOLE_DEPTH_TOLERANCE;
-          z = holeDepth / 2;
-        }
-        rot = [0, 0, 0];
-      } else {
-        throw new Error(`Invalid surface: ${surface}`);
-      }
-
-      if (hole.shape === 'square') {
-        result.push(
-          translate(
-            [x, y, z],
-            rotate(
-              rot,
-              cuboid({
-                size: [hole.width, hole.width, holeDepth],
-              }),
-            ),
-          ),
-        );
-      } else if (hole.shape === 'rectangle') {
-        result.push(
-          translate(
-            [x, y, z],
-            rotate(
-              rot,
-              cuboid({
-                size: [hole.width, hole.length, holeDepth],
-              }),
-            ),
-          ),
-        );
-      } else if (hole.shape === 'circle') {
-        result.push(
-          translate(
-            [x, y, z],
-            rotate(
-              rot,
-              cylinder({
-                radius: hole.diameter / 2,
-                height: holeDepth,
-              }),
-            ),
-          ),
-        );
-      }
-    });
-  });
-
-  return translate([-width / 2, -length / 2, 0], union(result));
+  let geometry: Geom3;
+  switch (shape) {
+    case 'circle':
+      const radius = diameter / 2;
+      geometry = cylinder({
+        radius: radius,
+        height: holeDepth,
+        center: [0, 0, - holeDepth / 2],
+      });
+      break;
+    case 'rectangle':
+      geometry = cuboid({
+        size: [holeWidth, holeLength, holeDepth],
+        center: [0, 0, - holeDepth / 2],
+      });
+      break;
+    case 'square':
+      geometry = cuboid({
+        size: [holeWidth, holeWidth, holeDepth],
+        center: [0, 0, - holeDepth / 2],
+      });
+      break;
+    default:
+      throw new Error(`Invalid shape: ${shape}`);
+  }
+  return geometry;
 };
-
-export const hole = (params: Params, hole: Hole): Geom3 => {
-  return holes({ ...params, holes: [hole] }, [hole.surface]);
-}
-
-export const holeFeature = (params: Params, hole: Hole): Feature => {
-  const { length, width } = params;
-  const geometry = holes({ ...params, holes: [hole] }, [hole.surface]);
-  return {
-    geometry,
-    surface: 'plane',
-    x: 0,
-    y: 0,
-  };
-}
 

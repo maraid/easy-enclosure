@@ -54,8 +54,8 @@ export class ParamsFormComponent {
   }
 
   definitionId(feature: FeatureTarget): string {
-    if ('index' in feature) {
-      return this.featureId(feature.type, feature.index);
+    if ('id' in feature) {
+      return this.featureId(feature.type, feature.id);
     }
     if (feature.type === 'lid') {
       return 'definition-base';
