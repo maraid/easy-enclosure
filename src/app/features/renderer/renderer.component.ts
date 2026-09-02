@@ -23,8 +23,9 @@ import type { Entity } from '@jscad/regl-renderer/types/geometry-utils-V2/entity
 
 import type { Params } from '../../core/params';
 import { EnclosureStateService } from '../../core/state/enclosure-state.service';
-import { ObjectUpdater, Operation } from './renderer.update';
+import { ObjectUpdater, Operation, Origin, Placer } from './renderer.update';
 import { FeatureTarget } from '../../core/state/enclosure-state.service';
+import { Surface } from '../../core/enclosure';
 
 
 const gridDeps = [
@@ -200,6 +201,18 @@ type FeatureCandidate = {
   triangles: [Vec3Tuple, Vec3Tuple, Vec3Tuple][];
 };
 
+type DragAxis = 'x' | 'y';
+
+type DragState = {
+  feature: FeatureTarget;
+  startScreen: [number, number];
+  startValue: { x: number; y: number; z: number };
+  axis: DragAxis | null;         // null until locked
+  axisScreenDir: [number, number] | null; // screen-space unit vector for the locked axis
+  unitsPerPixel: number;
+};
+
+
 @Component({
   selector: 'app-renderer',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -214,6 +227,7 @@ type FeatureCandidate = {
   templateUrl: './renderer.component.html',
 })
 export class RendererComponent implements AfterViewInit, OnDestroy {
+
   @ViewChild('container', { static: true })
   containerRef?: ElementRef<HTMLDivElement>;
 
@@ -258,6 +272,13 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
 
   readonly surfaceLabels = signal<SurfaceLabel[]>([]);
 
+  // Drag
+  private drag: DragState | null = null;
+  private readonly dragLockThreshold = 4; // px before axis locks
+  private lastCommittedValue: number | null = null;
+
+  private placer = new Placer();
+
 
   constructor() {
     effect(() => {
@@ -289,7 +310,244 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
     }
   }
 
+  // onPointerMove(event: PointerEvent): void {
+  //   if (!this.pointerDown) {
+  //     this.setHoveredFeature(this.featureAtScreenPosition(event));
+  //     return;
+  //   }
+
+  //   const dx = this.lastX - event.pageX;
+  //   const dy = event.pageY - this.lastY;
+
+  //   if (event.shiftKey) {
+  //     this.panDelta[0] += dx;
+  //     this.panDelta[1] += dy;
+  //   } else {
+  //     this.rotateDelta[0] -= dx;
+  //     this.rotateDelta[1] -= dy;
+  //   }
+
+  //   this.lastX = event.pageX;
+  //   this.lastY = event.pageY;
+  //   event.preventDefault();
+  // }
+
+  private getFeatureCoords(feature: FeatureTarget): { x: number; y: number; z: number } {
+    const params = this.state.params();
+
+    switch (feature.type) {
+      case 'hole': {
+        const h = params.holes.find((h) => h.id === feature.id);
+        return { x: h?.x ?? 0, y: h?.y ?? 0, z: 0 }; // Hole has no z
+      }
+      case 'pcbMount': {
+        const m = params.pcbMounts.find((m) => m.id === feature.id);
+        return { x: m?.x ?? 0, y: m?.y ?? 0, z: 0 }; // PCBMount has no z either
+      }
+      case 'internalWall': {
+        const w = params.internalWalls.find((w) => w.id === feature.id);
+        return { x: w?.x ?? 0, y: w?.y ?? 0, z: 0 };
+      }
+      case 'cableClamp': {
+        const c = params.cableClamps.find((c) => c.id === feature.id);
+        return { x: c?.x ?? 0, y: c?.y ?? 0, z: 0 };
+      }
+      case 'pcb':
+        return { x: params.pcb.x, y: params.pcb.y, z: params.pcb.z };
+      default:
+        return { x: 0, y: 0, z: 0 }; // base/lid/lidInsert/waterproof/wallMount/screwHole aren't draggable
+    }
+  }
+
+  private commitFeatureCoord(feature: FeatureTarget, axis: 'x' | 'y' | 'z', value: number): void {
+    const params = this.state.params();
+
+    switch (feature.type) {
+      case 'hole':
+        if (axis === 'z') return; // Hole has no z
+        this.state.updateParam('holes', params.holes.map((h) =>
+          h.id === feature.id ? { ...h, [axis]: value } : h,
+        ));
+        return;
+
+      case 'pcbMount':
+        if (axis === 'z') return; // PCBMount has no z
+        this.state.updateParam('pcbMounts', params.pcbMounts.map((m) =>
+          m.id === feature.id ? { ...m, [axis]: value } : m,
+        ));
+        return;
+
+      case 'internalWall':
+        if (axis === 'z') return;
+        this.state.updateParam('internalWalls', params.internalWalls.map((w) =>
+          w.id === feature.id ? { ...w, [axis]: value } : w,
+        ));
+        return;
+
+      case 'cableClamp':
+        if (axis === 'z') return;
+        this.state.updateParam('cableClamps', params.cableClamps.map((c) =>
+          c.id === feature.id ? { ...c, [axis]: value } : c,
+        ));
+        return;
+
+      case 'pcb':
+        this.state.updateParam('pcb', { ...params.pcb, [axis]: value });
+        return;
+
+      default:
+        return;
+    }
+  }
+
+  onPointerDown(event: PointerEvent): void {
+    const feature = this.featureAtScreenPosition(event);
+
+    if (feature && this.isDraggable(feature)) {
+      this.state.selectFeature(feature);
+      this.beginDrag(feature, event);
+      this.containerRef?.nativeElement.setPointerCapture(event.pointerId);
+      return; // don't fall through to orbit
+    }
+
+    if (feature) this.state.selectFeature(feature);
+    this.pointerDown = true;
+    this.lastX = event.pageX;
+    this.lastY = event.pageY;
+    this.containerRef?.nativeElement.setPointerCapture(event.pointerId);
+  }
+
+  private beginDrag(feature: FeatureTarget, event: PointerEvent): void {
+    const current = this.getFeatureCoords(feature);
+    this.drag = {
+      feature,
+      startScreen: [event.pageX, event.pageY],
+      startValue: current,
+      axis: null,
+      axisScreenDir: null,
+      unitsPerPixel: 1,
+    };
+    this.lastCommittedValue = null;
+  }
+
+  private findFeatureItem(feature: FeatureTarget): { surface: Surface } | undefined {
+    const params = this.state.params();
+
+    switch (feature.type) {
+      case 'hole':
+        return params.holes.find((h) => h.id === feature.id);
+      case 'pcbMount':
+        return params.pcbMounts.find((m) => m.id === feature.id);
+      case 'internalWall':
+        return params.internalWalls.find((w) => w.id === feature.id);
+      case 'cableClamp':
+        return params.cableClamps.find((c) => c.id === feature.id);
+      case 'pcb':
+        return params.pcb;
+      default:
+        return undefined; // base/lid/lidInsert/waterproof/wallMount/screwHole
+    }
+  }
+
+  private worldPointFor(coords: { x: number; y: number; z: number }): Vec3Tuple {
+    const feature = this.drag!.feature;
+    const params = this.state.params();
+    const item = this.findFeatureItem(feature); // same lookup as getFeatureCoords, returns the raw object for its surface
+    const surface = item?.surface ?? 'bottom';
+    const origin: Origin = surface === 'top' ? 'lid' : 'base'; // matches HoleUpdater's own origin logic
+    return this.placer.pointFor(coords.x, coords.y, coords.z, surface, origin, params);
+  }
+
+  private draggableAxesFor(type: FeatureTarget['type']): DragAxis[] {
+    return ['x', 'y'];
+  }
+
+
+  private updateDrag(event: PointerEvent): void {
+    if (!this.drag) return;
+    const container = this.containerRef?.nativeElement;
+    if (!container) return;
+
+    const dx = event.pageX - this.drag.startScreen[0];
+    const dy = event.pageY - this.drag.startScreen[1];
+
+    if (this.drag.axis === null) {
+      if (Math.hypot(dx, dy) < this.dragLockThreshold) return; // not enough movement yet to decide
+
+      const origin = this.worldPointFor(this.drag.startValue);
+      const MIN_SCREEN_LEN = 10; // px — below this, an axis's on-screen motion is too small/unstable to use
+
+      const candidates: { axis: DragAxis; dir: [number, number]; unitsPerPixel: number }[] = [];
+
+      const draggableAxes: DragAxis[] = ['x', 'y'];
+      for (const axis of draggableAxes) {
+        const offset = { ...this.drag.startValue, [axis]: this.drag.startValue[axis] + 10 };
+        const a = this.projectWorldToScreen(origin, container);
+        const b = this.projectWorldToScreen(this.worldPointFor(offset), container);
+        if (!a || !b) continue;
+
+        const screenDx = b[0] - a[0];
+        const screenDy = b[1] - a[1];
+        const screenLen = Math.hypot(screenDx, screenDy);
+
+        if (screenLen < MIN_SCREEN_LEN) continue; // degenerate from this camera angle, skip
+
+        candidates.push({
+          axis,
+          dir: [screenDx / screenLen, screenDy / screenLen],
+          unitsPerPixel: 10 / screenLen,
+        });
+      }
+
+      if (candidates.length === 0) {
+        // every axis is degenerate from this angle (e.g. dead-on view) — bail cleanly
+        this.drag = null;
+        // this.hideDragLabel();
+        return;
+      }
+
+      const dragLen = Math.hypot(dx, dy) || 1;
+      const dragDir: [number, number] = [dx / dragLen, dy / dragLen];
+
+      let best = candidates[0];
+      let bestScore = -Infinity;
+      for (const c of candidates) {
+        const score = Math.abs(c.dir[0] * dragDir[0] + c.dir[1] * dragDir[1]);
+        if (score > bestScore) { bestScore = score; best = c; }
+      }
+
+      this.drag.axis = best.axis;
+      this.drag.axisScreenDir = best.dir;
+      this.drag.unitsPerPixel = best.unitsPerPixel;
+    }
+
+    // project (dx, dy) onto the locked axis's screen direction
+    const [ux, uy] = this.drag.axisScreenDir!;
+    const along = dx * ux + dy * uy;
+    const delta = along * this.drag.unitsPerPixel;
+
+    const axis = this.drag.axis;
+    const rawValue = this.drag.startValue[axis] + delta;
+
+    const STEP = 0.5; // mm
+    const snapped = Math.round(rawValue / STEP) * STEP;
+
+    if (snapped === this.lastCommittedValue) {
+      return; // no meaningful change — skip state write, skip re-render entirely
+    }
+    this.lastCommittedValue = snapped;
+
+    this.commitFeatureCoord(this.drag.feature, axis, snapped);
+    // this.updateDragLabel(event, axis, snapped);
+  }
+
   onPointerMove(event: PointerEvent): void {
+    if (this.drag) {
+      this.updateDrag(event);
+      event.preventDefault();
+      return;
+    }
+
     if (!this.pointerDown) {
       this.setHoveredFeature(this.featureAtScreenPosition(event));
       return;
@@ -311,23 +569,26 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
     event.preventDefault();
   }
 
-  onPointerDown(event: PointerEvent): void {
-    const feature = this.featureAtScreenPosition(event);
-    if (feature) {
-      this.state.selectFeature(feature);
+  onPointerUp(event: PointerEvent): void {
+    if (this.drag) {
+      this.drag = null;
+      // this.hideDragLabel();
+      this.containerRef?.nativeElement.releasePointerCapture(event.pointerId);
+      return;
     }
-    this.pointerDown = true;
-    this.lastX = event.pageX;
-    this.lastY = event.pageY;
-    this.containerRef?.nativeElement.setPointerCapture(event.pointerId);
-    // this.updateSurfaceLabels();
+    this.pointerDown = false;
+    this.containerRef?.nativeElement.releasePointerCapture(event.pointerId)
   }
 
-  onPointerUp(event: PointerEvent): void {
-    this.pointerDown = false;
-    this.containerRef?.nativeElement.releasePointerCapture(event.pointerId);
-    // this.updateSurfaceLabels();
+  private isDraggable(feature: FeatureTarget): boolean {
+    return ['pcbMount', 'hole', 'internalWall', 'cableClamp', 'pcb'].includes(feature.type);
   }
+
+  // onPointerUp(event: PointerEvent): void {
+  //   this.pointerDown = false;
+  //   this.containerRef?.nativeElement.releasePointerCapture(event.pointerId);
+  //   // this.updateSurfaceLabels();
+  // }
 
   onPointerLeave(): void {
     if (!this.pointerDown) {
@@ -424,8 +685,10 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
 
     this.pendingParams = params;
 
+    if (this.isRendering) return; // flushRender's finally-block will pick this up
+
     const elapsed = performance.now() - this.lastRenderTime;
-    const minInterval = 16; // ~60fps ceiling, not 250ms
+    const minInterval = 16;
 
     if (elapsed >= minInterval) {
       this.flushRender(paramsDiff);
@@ -435,18 +698,59 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
         if (this.pendingParams) this.flushRender(paramsDiff);
       }, minInterval - elapsed);
     }
-    // else: a flush is already scheduled, this update will be picked up by it
   }
 
+  private isRendering = false;
+
   private flushRender(diff: string[]): void {
+    if (this.isRendering) {
+      // a render is already in flight — don't start another. The next
+      // scheduleModelRender call (from the next commit) will pick up
+      // whatever pendingParams looks like once this one finishes.
+      return;
+    }
+
     const params = this.pendingParams!;
     this.pendingParams = null;
     this.lastRenderTime = performance.now();
+    this.isRendering = true;
     this.state.setLoading(true);
+
     void this.renderModel(params, diff).finally(() => {
+      this.isRendering = false;
       this.state.setLoading(false);
       this.prevParams = JSON.parse(JSON.stringify(params)) as Params;
+
+      // if more updates arrived while we were rendering, catch up now
+      if (this.pendingParams) {
+        this.scheduleModelRender(this.pendingParams);
+      }
     });
+  }
+
+  private readonly MIN_POLAR_ANGLE = 0.1; // radians off straight-down/up
+  private readonly MAX_POLAR_ANGLE = Math.PI - 0.1;
+
+  private clampCameraPolarAngle(): void {
+    const [cx, cy, cz] = this.camera.position as Vec3Tuple;
+    const [tx, ty, tz] = this.camera.target as Vec3Tuple;
+    const dx = cx - tx, dy = cy - ty, dz = cz - tz;
+    const radius = Math.hypot(dx, dy, dz);
+    if (radius < 1e-6) return;
+
+    const polar = Math.acos(dz / radius); // angle from +Z axis, 0 = straight up, PI = straight down
+    const clamped = Math.min(Math.max(polar, this.MIN_POLAR_ANGLE), this.MAX_POLAR_ANGLE);
+
+    if (clamped !== polar) {
+      const azimuth = Math.atan2(dy, dx);
+      const horizR = radius * Math.sin(clamped);
+      const newDz = radius * Math.cos(clamped);
+      this.camera.position = [
+        tx + horizR * Math.cos(azimuth),
+        ty + horizR * Math.sin(azimuth),
+        tz + newDz,
+      ] as Vec3Tuple;
+    }
   }
 
   private doRotatePanZoom(): void {
@@ -456,10 +760,10 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
         this.rotateDelta,
       );
       this.control = { ...this.control, ...updated.controls };
+      this.clampCameraPolarAngle(); // now clamps the actual source of truth
       this.updateView = true;
       this.rotateDelta = [0, 0];
     }
-
     if (this.panDelta[0] || this.panDelta[1]) {
       const updated = this.orbitControls.pan(
         { controls: this.control, camera: this.camera, speed: this.panSpeed },
@@ -515,13 +819,12 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
       this.updateView = this.control.changed;
 
       this.camera.position = updates.camera.position;
+      this.clampCameraPolarAngle(); // <-- clamp here, after position is finalized for this frame
       this.perspectiveCamera.update(this.camera);
 
       if (this.renderer && this.renderOptions) {
         this.renderer(this.renderOptions);
       }
-
-      // this.updateSurfaceLabels();
     }
 
     this.animationFrame = requestAnimationFrame(this.updateAndRender);

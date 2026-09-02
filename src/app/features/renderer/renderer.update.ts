@@ -34,7 +34,7 @@ export type FeatureEntry = {
 // Placement
 // ---------------------------------------------------------------------------
 
-type Origin = 'base' | 'lid' | 'seal' | 'clampTops';
+export type Origin = 'base' | 'lid' | 'seal' | 'clampTops';
 
 type OriginTransform = {
     translate: Vec3Tuple;
@@ -67,7 +67,7 @@ const SURFACE_ORIGIN: Partial<Record<Surface, Origin>> = {
 const SPACING = 20;
 
 
-class Placer {
+export class Placer {
     SPACING = 20;
 
     private baseOrigin(params: Params): Vec3Tuple { return [0, 0, 0]; }
@@ -103,7 +103,6 @@ class Placer {
         const surface = placement.surface ?? 'bottom';
         const origin = SURFACE_ORIGIN[surface] ?? placement.origin ?? 'base';
 
-        const start = performance.now();
         let ret = this.placeOnSurface(geometry, placement, params);
 
         const strategy = this.origins[origin];
@@ -113,8 +112,6 @@ class Placer {
         ret = translate(strategy(params).translate, ret);
 
         ret = mirror({ normal: [1, 0, 0] }, ret);
-        const elapsed = performance.now() - start;
-        console.log(`Execution time placeOnSurface: ${elapsed.toFixed(3)} ms`);
         return ret;
     }
 
@@ -167,6 +164,28 @@ class Placer {
             default:
                 return spun;
         }
+    }
+
+    // in Placer
+    pointFor(x: number, y: number, z: number, surface: Surface, origin: Origin, params: Params): Vec3Tuple {
+        // reuse the same per-surface math as placeOnSurface, but for a bare point instead of geometry
+        const { floor, roof, height, length, width, wall, waterProof, insertThickness, insertClearance } = params;
+        const innerWallThickness = waterProof ? wall * 2 + insertClearance * 2 + insertThickness : wall;
+        const wallX = width / 2, wallY = length / 2, wallZ = height / 2;
+
+        let local: Vec3Tuple;
+        switch (surface) {
+            case 'bottom': local = [x, y, floor + z]; break;
+            case 'top': local = [x, y, roof + z]; break;
+            case 'front': local = [x, wallY - innerWallThickness - z, wallZ + y]; break;
+            case 'back': local = [x, -wallY + innerWallThickness + z, wallZ + y]; break;
+            case 'right': local = [wallX - innerWallThickness - z, y, wallZ + x]; break;
+            case 'left': local = [-wallX + innerWallThickness + z, y, wallZ + x]; break;
+            default: local = [x, y, z]; break;
+        }
+
+        const [ox, oy, oz] = this.origins[origin](params).translate;
+        return [-(local[0] + ox), local[1] + oy, local[2] + oz]; // mirror X to match place()'s final mirror
     }
 }
 
@@ -223,10 +242,7 @@ abstract class BaseComponentUpdater<T = any> {
     }
 
     public update(obj: T, params: Params): void {
-        const start = performance.now();
         this.ensureGeometry(obj, params);
-        const elapsed = performance.now() - start;
-        console.log(`Execution time ensureGeometry: ${elapsed.toFixed(3)} ms`);
     }
 
     protected ensureGeometry(obj: T, params: Params): void {
@@ -235,10 +251,7 @@ abstract class BaseComponentUpdater<T = any> {
 
         if (this.m_geometry === null || this.m_geometryKey !== newKey) {
             this.m_geometryKey = newKey;
-            const start = performance.now();
             this.m_geometry = this.geometryFn(...args);
-            const elapsed = performance.now() - start;
-            console.log(`Execution time geometryFn: ${elapsed.toFixed(3)} ms`);
             this.m_placedGeometry = null;
         }
 
