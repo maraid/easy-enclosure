@@ -1,9 +1,14 @@
 import { Injectable, computed, signal } from '@angular/core';
 import { DEFAULT_PARAMS, Params, cloneParams } from '../params';
 
-export type FeatureTarget =
-  | { type: 'hole' | 'pcbMount' | 'internalWall' | 'cableClamp'; id: string }
-  | { type: 'base' | 'lid' | 'lidInsert' | 'waterproof' | 'wallMount' | 'screwHole' | 'pcb' };
+
+export type FeatureTarget = {
+  id: string;
+  group?: string;
+  type: 'base' | 'lid' | 'lidInsert' | 'hole' | 'pcbMount' | 'internalWall'
+  | 'waterproof' | 'wallMount' | 'screwHole' | 'cableClamp' | 'pcb';
+};
+
 
 @Injectable({ providedIn: 'root' })
 export class EnclosureStateService {

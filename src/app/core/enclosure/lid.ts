@@ -1,21 +1,22 @@
-import { booleans, transforms } from '@jscad/modeling';
+import { transforms } from '@jscad/modeling';
+import { Params } from '../params';
+import { Geom3 } from '@jscad/modeling/src/geometries/types';
+
 import { cloverFrame, centeredRoundedCube, roundedFrame } from './utils';
 
-import { Params, Hole } from '../params';
-import { subtract } from '@jscad/modeling/src/operations/booleans';
-// import { holes } from './holes';
-import { lidScrewHoles, screwBosses } from './screws';
-import { Feature } from './feature';
-
-
-const { union } = booleans;
 const { translate } = transforms;
+
+export type LidInsertParams = Pick<
+  Params,
+  | 'width' | 'length' | 'wall' | 'lidScrews' | 'cornerRadius'
+  | 'insertThickness' | 'insertHeight' | 'insertClearance'
+  | 'baseLidScrewDiameter' | 'lidScrewDiameter' | 'sunkenLidScrewHeads' | 'lidScrewHeadDiameter'
+>;
 
 export const lidInsert = ({
   width,
   length,
   wall,
-  roof,
   lidScrews,
   cornerRadius,
   insertThickness,
@@ -24,8 +25,8 @@ export const lidInsert = ({
   baseLidScrewDiameter,
   lidScrewDiameter,
   sunkenLidScrewHeads,
-  lidScrewHeadDiameter }: Params) => {
-
+  lidScrewHeadDiameter,
+}: LidInsertParams): Geom3 => {
   const insertOrigin: [number, number, number] = [
     wall + insertClearance,
     wall + insertClearance,
@@ -62,45 +63,21 @@ export const lidInsert = ({
   ));
 };
 
-export type LidWithHolesParams = {
+export type LidParams = {
   width: number;
   length: number;
   roof: number;
-  wall: number;
   cornerRadius: number;
-  lidScrews: boolean;
-  lidScrewDiameter: number;
-  sunkenLidScrewHeads: boolean;
-  lidScrewHeadDiameter: number;
-  lidScrewHeadDepth: number;
-  height: number;
-  insertHeight: number;
-  insertThickness: number;
-  insertClearance: number;
-  holes: Hole[];
 }
 
 
-export const lidWithHoles = ({
+export const lid = ({
   width,
   length,
   roof,
-  wall,
   cornerRadius,
-  lidScrews,
-  lidScrewDiameter,
-  sunkenLidScrewHeads,
-  lidScrewHeadDiameter,
-  lidScrewHeadDepth,
-  height,
-  insertHeight,
-  insertThickness,
-  insertClearance,
-  holes: holeParams,
-}: LidWithHolesParams) => {
-  const entities = [];
-  const subtracts = [];
-  entities.push(centeredRoundedCube(width, length, roof, cornerRadius));
+}: LidParams) => {
+  return centeredRoundedCube(width, length, roof, cornerRadius);
   // const lidHoles = holes({
   //   length,
   //   width,
@@ -115,49 +92,21 @@ export const lidWithHoles = ({
   // if (lidHoles) {
   //   subtracts.push(lidHoles);
   // }
-  const screwHoles = lidScrewHoles({
-    width,
-    length,
-    roof,
-    wall,
-    cornerRadius,
-    lidScrews,
-    lidScrewDiameter,
-    sunkenLidScrewHeads,
-    lidScrewHeadDiameter,
-    lidScrewHeadDepth,
-  });
-  if (screwHoles) {
-    subtracts.push(screwHoles);
-  }
-  return subtract(union(entities), union(subtracts));
+  // const screwHoles = lidScrewHoles({
+  //   width,
+  //   length,
+  //   roof,
+  //   wall,
+  //   cornerRadius,
+  //   lidScrews,
+  //   lidScrewDiameter,
+  //   sunkenLidScrewHeads,
+  //   lidScrewHeadDiameter,
+  //   lidScrewHeadDepth,
+  // });
+  // if (screwHoles) {
+  //   subtracts.push(screwHoles);
+  // }
+  // return subtract(union(entities), union(subtracts));
 
 }
-
-export const lid = (params: Params) => {
-  const entities = [];
-  entities.push(lidWithHoles(params));
-  // entities.push(lidInsert(params));
-  // const bosses = screwBosses(params);
-  const screwHoles = lidScrewHoles(params);
-  // if (bosses && screwHoles) {
-  //   entities.push(subtract(bosses, screwHoles));
-  // }
-  return union(entities);
-};
-
-
-export const lidFeature = (params: Params): Feature => {
-  const geometry = lid(params);
-  return { geometry, surface: 'plane', x: 0, y: 0 };
-};
-
-export const lidWithHolesFeature = (params: Params): Feature => {
-  const geometry = lidWithHoles(params);
-  return { geometry, surface: 'plane', x: 0, y: 0 };
-};
-
-export const lidInsertFeature = (params: Params): Feature => {
-  const geometry = lidInsert(params);
-  return { geometry, surface: 'plane', x: 0, y: 0 };
-};

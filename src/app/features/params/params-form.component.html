@@ -81,13 +81,12 @@
     </p>
     <div class="accordian-body">
       @for (hole of params().holes; track hole.id) {
-      <div class="sub-params" [id]="featureId('hole', hole.id)" [class.selected-feature]="isSelected('hole', hole.id)">
+      <div class="sub-params" [id]=hole.id [class.selected-feature]="isSelected('hole', hole.id)">
         <div class="component-header">
           @if (isRenaming('hole', hole.id)) {
           <input [id]="renameInputId('hole', hole.id)" class="component-name-input" type="text"
             [value]="displayName(hole.name, 'Hole ' + ($index + 1))"
-            [attr.size]="nameInputSize(hole.name, 'Hole ' + ($index + 1))"
-            (keydown.enter)="finishRenaming('hole', hole.id, $any($event.target).value)"
+            [attr.size]="nameInputSize(hole.name, 'Hole ' + ($index + 1))" (keydown.enter)="$any($event.target).blur()"
             (blur)="finishRenaming('hole', hole.id, $any($event.target).value)" />
           } @else {
           <b class="component-name" title="Double-click to rename" (dblclick)="startRenaming('hole', hole.id)">
@@ -173,14 +172,13 @@
     </p>
     <div class="accordian-body">
       @for (mount of params().pcbMounts; track mount.id) {
-      <div class="sub-params" [id]="featureId('pcbMount', mount.id)"
-        [class.selected-feature]="isSelected('pcbMount', mount.id)">
+      <div class="sub-params" [id]=mount.id [class.selected-feature]="isSelected('pcbMount', mount.id)">
         <div class="component-header">
           @if (isRenaming('pcbMount', mount.id)) {
           <input [id]="renameInputId('pcbMount', mount.id)" class="component-name-input" type="text"
             [value]="displayName(mount.name, 'Mount ' + ($index + 1))"
             [attr.size]="nameInputSize(mount.name, 'Mount ' + ($index + 1))"
-            (keydown.enter)="finishRenaming('pcbMount', mount.id, $any($event.target).value)"
+            (keydown.enter)="$any($event.target).blur()"
             (blur)="finishRenaming('pcbMount', mount.id, $any($event.target).value)" />
           } @else {
           <b class="component-name" title="Double-click to rename" (dblclick)="startRenaming('pcbMount', mount.id)">
@@ -246,14 +244,13 @@
     </p>
     <div class="accordian-body">
       @for (wallItem of params().internalWalls; track wallItem.id) {
-      <div class="sub-params" [id]="featureId('internalWall', wallItem.id)"
-        [class.selected-feature]="isSelected('internalWall', wallItem.id)">
+      <div class="sub-params" [id]=wallItem.id [class.selected-feature]="isSelected('internalWall', wallItem.id)">
         <div class="component-header">
           @if (isRenaming('internalWall', wallItem.id)) {
           <input [id]="renameInputId('internalWall', wallItem.id)" class="component-name-input" type="text"
             [value]="displayName(wallItem.name, 'Internal Wall ' + ($index + 1))"
             [attr.size]="nameInputSize(wallItem.name, 'Internal Wall ' + ($index + 1))"
-            (keydown.enter)="finishRenaming('internalWall', wallItem.id, $any($event.target).value)"
+            (keydown.enter)="$any($event.target).blur()"
             (blur)="finishRenaming('internalWall', wallItem.id, $any($event.target).value)" />
           } @else {
           <b class="component-name" title="Double-click to rename"
@@ -329,14 +326,13 @@
     </p>
     <div class="accordian-body">
       @for (clamp of params().cableClamps; track clamp.id) {
-      <div class="sub-params" [id]="featureId('cableClamp', clamp.id)"
-        [class.selected-feature]="isSelected('cableClamp', clamp.id)">
+      <div class="sub-params" [id]=clamp.id [class.selected-feature]="isSelected('cableClamp', clamp.id)">
         <div class="component-header">
           @if (isRenaming('cableClamp', clamp.id)) {
           <input [id]="renameInputId('cableClamp', clamp.id)" class="component-name-input" type="text"
             [value]="displayName(clamp.name, 'Clamp ' + ($index + 1))"
             [attr.size]="nameInputSize(clamp.name, 'Clamp ' + ($index + 1))"
-            (keydown.enter)="finishRenaming('cableClamp', clamp.id, $any($event.target).value)"
+            (keydown.enter)="$any($event.target).blur()"
             (blur)="finishRenaming('cableClamp', clamp.id, $any($event.target).value)" />
           } @else {
           <b class="component-name" title="Double-click to rename" (dblclick)="startRenaming('cableClamp', clamp.id)">

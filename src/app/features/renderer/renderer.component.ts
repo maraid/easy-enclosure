@@ -10,12 +10,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import type { Geom3 } from '@jscad/modeling/src/geometries/types';
-import type { Vec3 } from '@jscad/modeling/src/maths/types';
 import measureBoundingBox from '@jscad/modeling/src/measurements/measureBoundingBox';
-import { union } from '@jscad/modeling/src/operations/booleans';
-import { translate, mirror, rotateZ, rotateX, rotateY } from '@jscad/modeling/src/operations/transforms';
-import { degToRad } from '@jscad/modeling/src/utils';
-import { colorize } from '@jscad/modeling/src/colors';
 
 import {
   cameras,
@@ -26,91 +21,12 @@ import {
 } from '@jscad/regl-renderer';
 import type { Entity } from '@jscad/regl-renderer/types/geometry-utils-V2/entity';
 
-// import { flangeFeatures } from '../../core/enclosure/wallmount';
 import type { Params } from '../../core/params';
-import { EnclosureStateService, FeatureTarget } from '../../core/state/enclosure-state.service';
-import { Feature } from "./../../core/enclosure/feature";
-import { Surface } from './../../core/enclosure/index';
-import { FeatureStore } from './renderer.store';
-import { ObjectUpdater } from './renderer.update';
+import { EnclosureStateService } from '../../core/state/enclosure-state.service';
+import { ObjectUpdater, Operation } from './renderer.update';
+import { FeatureTarget } from '../../core/state/enclosure-state.service';
 
 
-const SPACING = 20;
-
-const lidDeps = [
-  'length',
-  'width',
-  'roof',
-  'wall',
-  'cornerRadius',
-  'lidScrews',
-  'waterProof',
-  'lidScrewDiameter',
-  'baseLidScrewDiameter',
-  'sunkenLidScrewHeads',
-  'lidScrewHeadDiameter',
-  'lidScrewHeadDepth',
-  'boreHoleClearance',
-  'insertThickness',
-  'insertHeight',
-  'insertClearance',
-  'holes',
-];
-const baseDeps = [
-  'length',
-  'width',
-  'height',
-  'wall',
-  'floor',
-  'cornerRadius',
-  'holes',
-  'wallMounts',
-  'lidScrews',
-  'baseLidScrewDiameter',
-  'sunkenLidScrewHeads',
-  'lidScrewHeadDiameter',
-  'lidScrewHeadDepth',
-  'boreHoleClearance',
-  'waterProof',
-  'insertThickness',
-  'insertHeight',
-  'sealThickness',
-  'wallMountScrewDiameter',
-  'wallMountCount',
-  'insertClearance',
-];
-const sealDeps = [
-  'length',
-  'width',
-  'wall',
-  'cornerRadius',
-  'waterProof',
-  'sealThickness',
-  'insertClearance',
-  'insertThickness',
-  'lidScrewDiameter',
-  'baseLidScrewDiameter',
-  'sunkenLidScrewHeads',
-  'lidScrewHeadDiameter',
-  'boreHoleClearance',
-  'lidScrewHeadDepth',
-  'lidScrews',
-];
-const mountDeps = [
-  'pcbMounts',
-  'waterProof',
-  'wall',
-  'floor',
-  'lidScrews',
-  'height',
-  'roof',
-  'length',
-  'width',
-  'insertThickness',
-  'insertClearance',
-];
-const internalWallDeps = ['internalWalls', 'length', 'width', 'waterProof', 'floor'];
-const cableClampDeps = ['cableClamps', 'length', 'width', 'waterProof', 'floor'];
 const gridDeps = [
   'showGrid',
   'gridSpacing',
@@ -318,6 +234,7 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
   private rotateDelta: [number, number] = [0, 0];
   private panDelta: [number, number] = [0, 0];
   private zoomDelta = 0;
+  private wheelInteracting = true;
   private pointerDown = false;
   private zoomToFit = true;
   private updateView = true;
@@ -326,30 +243,9 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
   private readonly panSpeed = 1;
   private readonly zoomSpeed = 0.08;
 
-  private lidModel: Geom3 | null = null;
-  private baseModel: Geom3 | null = null;
-  private wallMountModel: Geom3 | null = null;
-  private sealModel: Geom3 | null = null;
-  private mountsModel: Geom3 | null = null;
-  private internalWallsModel: Geom3 | null = null;
-  private cableClampsModel: Geom3 | null = null;
-  private pcbModel: Geom3 | null = null;
-
-  private lidModelHighlight: FeatureCandidate | null = null;
-  private lidInsertModelHighlight: FeatureCandidate | null = null;
-  private screwHoleModelHighlight: FeatureCandidate | null = null;
-  private baseModelHighlight: FeatureCandidate | null = null;
-  private wallMountModelHighlight: FeatureCandidate | null = null;
-  private sealModelHighlight: FeatureCandidate | null = null;
-  private holeModelHighlight: FeatureCandidate[] = [];
-  private mountsModelHighlight: FeatureCandidate[] = [];
-  private internalWallsModelHighlight: FeatureCandidate[] = [];
-  private cableClampsModelHighlight: FeatureCandidate[] = [];
-  private pcbModelHighlight: FeatureCandidate | null = null;
-
   private renderOptions: RenderOptions | null = null;
   private baseRenderEntities: Entity[] = [];
-  private featureCandidates: FeatureCandidate[] = [];
+  private featureCandidates: { id: string; group?: string; geometry: Geom3; triangles: [Vec3Tuple, Vec3Tuple, Vec3Tuple][], type: FeatureTarget['type'], operation: Operation }[] = [];
   private hoveredFeature: FeatureTarget | null = null;
   private renderer: ((options?: RenderOptions) => void) | null = null;
   private objects: ObjectUpdater = new ObjectUpdater();
@@ -358,16 +254,10 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
   private prevParams: Params | null = null;
   private renderDelayHandle: ReturnType<typeof setTimeout> | null = null;
   private isViewReady = false;
-  private baseOrigin: Vec3Tuple = [0, 0, 0];
-  private lidOrigin: Vec3Tuple = [0, 0, 0];
-  private sealOrigin: Vec3Tuple = [0, 0, 0];
-  private clampTopsOrigin: Vec3Tuple = [0, 0, 0];
-  private wheelInteracting = false;
   private wheelInteractionHandle: ReturnType<typeof setTimeout> | null = null;
 
   readonly surfaceLabels = signal<SurfaceLabel[]>([]);
 
-  private store = new FeatureStore();
 
   constructor() {
     effect(() => {
@@ -430,13 +320,13 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
     this.lastX = event.pageX;
     this.lastY = event.pageY;
     this.containerRef?.nativeElement.setPointerCapture(event.pointerId);
-    this.updateSurfaceLabels();
+    // this.updateSurfaceLabels();
   }
 
   onPointerUp(event: PointerEvent): void {
     this.pointerDown = false;
     this.containerRef?.nativeElement.releasePointerCapture(event.pointerId);
-    this.updateSurfaceLabels();
+    // this.updateSurfaceLabels();
   }
 
   onPointerLeave(): void {
@@ -453,9 +343,9 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
     }
     this.wheelInteractionHandle = setTimeout(() => {
       this.wheelInteracting = false;
-      this.updateSurfaceLabels();
+      // this.updateSurfaceLabels();
     }, 250);
-    this.updateSurfaceLabels();
+    // this.updateSurfaceLabels();
   }
 
   private checkDeps(diff: string[], deps: string[]): boolean {
@@ -495,11 +385,8 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
     const spanY = Math.max(spacing, maxY - minY);
     const sizeX = this.roundUpToStep(spanX + (visiblePadding + fadePadding) * 2, majorSpacing);
     const sizeY = this.roundUpToStep(spanY + (visiblePadding + fadePadding) * 2, majorSpacing);
-    // const centerX = (minX + maxX) / 2;
-    // const centerY = (minY + maxY) / 2;
     const centerX = 0;
     const centerY = 0;
-    const modelRadius = Math.max(spanX, spanY) * 0.5;
 
     return {
       visuals: {
@@ -526,31 +413,40 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
     return [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1];
   }
 
+  private lastRenderTime = 0;
+  private pendingParams: Params | null = null;
+
   private scheduleModelRender(params: Params): void {
-    if (!this.isViewReady) {
-      return;
+    if (!this.isViewReady) return;
+
+    const paramsDiff = this.prevParams ? this.diffParams(this.prevParams, params) : Object.keys(params);
+    if (paramsDiff.length === 0) return;
+
+    this.pendingParams = params;
+
+    const elapsed = performance.now() - this.lastRenderTime;
+    const minInterval = 16; // ~60fps ceiling, not 250ms
+
+    if (elapsed >= minInterval) {
+      this.flushRender(paramsDiff);
+    } else if (this.renderDelayHandle === null) {
+      this.renderDelayHandle = setTimeout(() => {
+        this.renderDelayHandle = null;
+        if (this.pendingParams) this.flushRender(paramsDiff);
+      }, minInterval - elapsed);
     }
+    // else: a flush is already scheduled, this update will be picked up by it
+  }
 
-    const paramsDiff = this.prevParams
-      ? this.diffParams(this.prevParams, params)
-      : Object.keys(params);
-
-    if (paramsDiff.length === 0) {
-      return;
-    }
-
+  private flushRender(diff: string[]): void {
+    const params = this.pendingParams!;
+    this.pendingParams = null;
+    this.lastRenderTime = performance.now();
     this.state.setLoading(true);
-
-    if (this.renderDelayHandle !== null) {
-      clearTimeout(this.renderDelayHandle);
-    }
-
-    this.renderDelayHandle = setTimeout(() => {
-      void this.renderModel(params, paramsDiff).finally(() => {
-        this.state.setLoading(false);
-        this.prevParams = JSON.parse(JSON.stringify(params)) as Params;
-      });
-    }, 250);
+    void this.renderModel(params, diff).finally(() => {
+      this.state.setLoading(false);
+      this.prevParams = JSON.parse(JSON.stringify(params)) as Params;
+    });
   }
 
   private doRotatePanZoom(): void {
@@ -625,7 +521,7 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
         this.renderer(this.renderOptions);
       }
 
-      this.updateSurfaceLabels();
+      // this.updateSurfaceLabels();
     }
 
     this.animationFrame = requestAnimationFrame(this.updateAndRender);
@@ -657,224 +553,134 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
       this.setCameraProjection();
       this.zoomToFit = true;
       this.updateView = true;
-      this.updateSurfaceLabels();
+      // this.updateSurfaceLabels();
     });
     this.resizeObserver.observe(container);
   }
 
-  private updateSurfaceLabels(): void {
-    const container = this.containerRef?.nativeElement;
-    if (!container || !this.baseModel || (!this.pointerDown && !this.wheelInteracting)) {
-      this.surfaceLabels.set([]);
-      return;
-    }
+  // private updateSurfaceLabels(): void {
+  //   const container = this.containerRef?.nativeElement;
+  //   if (!container || !this.baseModel || (!this.pointerDown && !this.wheelInteracting)) {
+  //     this.surfaceLabels.set([]);
+  //     return;
+  //   }
 
-    const { width, length, height, roof, insertHeight } = this.state.params();
-    const [originX, originY, originZ] = this.baseOrigin;
-    const [lidX, lidY, lidZ] = this.lidOrigin;
+  //   const { width, length, height, roof, insertHeight } = this.state.params();
+  //   const [originX, originY, originZ] = this.baseOrigin;
+  //   const [lidX, lidY, lidZ] = this.lidOrigin;
 
-    const anchors: SurfaceAnchor[] = [
-      {
-        name: 'Front',
-        point: [originX + width / 2, originY + length, originZ + height / 2],
-        normal: [0, 1, 0],
-      },
-      {
-        name: 'Back',
-        point: [originX + width / 2, originY, originZ + height / 2],
-        normal: [0, -1, 0],
-      },
-      {
-        name: 'Left',
-        point: [originX + width, originY + length / 2, originZ + height / 2],
-        normal: [1, 0, 0],
-      },
-      {
-        name: 'Right',
-        point: [originX, originY + length / 2, originZ + height / 2],
-        normal: [-1, 0, 0],
-      },
-      {
-        name: 'Bottom',
-        point: [originX + width / 2, originY + length / 2, originZ],
-        normal: [0, 0, -1],
-      },
-    ];
+  //   const anchors: SurfaceAnchor[] = [
+  //     {
+  //       name: 'Front',
+  //       point: [originX + width / 2, originY + length, originZ + height / 2],
+  //       normal: [0, 1, 0],
+  //     },
+  //     {
+  //       name: 'Back',
+  //       point: [originX + width / 2, originY, originZ + height / 2],
+  //       normal: [0, -1, 0],
+  //     },
+  //     {
+  //       name: 'Left',
+  //       point: [originX + width, originY + length / 2, originZ + height / 2],
+  //       normal: [1, 0, 0],
+  //     },
+  //     {
+  //       name: 'Right',
+  //       point: [originX, originY + length / 2, originZ + height / 2],
+  //       normal: [-1, 0, 0],
+  //     },
+  //     {
+  //       name: 'Bottom',
+  //       point: [originX + width / 2, originY + length / 2, originZ],
+  //       normal: [0, 0, -1],
+  //     },
+  //   ];
 
-    if (this.lidModel) {
-      anchors.push({
-        name: 'Lid',
-        point: [lidX + width / 2, lidY + length / 2, lidZ + roof + insertHeight],
-        normal: [0, 0, 1],
-      });
-    }
+  //   if (this.lidModel) {
+  //     anchors.push({
+  //       name: 'Lid',
+  //       point: [lidX + width / 2, lidY + length / 2, lidZ + roof + insertHeight],
+  //       normal: [0, 0, 1],
+  //     });
+  //   }
 
-    if (this.sealModel) {
-      const [sealX, sealY, sealZ] = this.sealOrigin;
-      anchors.push({
-        name: 'Seal',
-        point: [sealX + width / 2, sealY + length / 2, sealZ + Math.max(1, roof) / 2],
-        normal: [0, 0, 1],
-      });
-    }
+  //   if (this.sealModel) {
+  //     const [sealX, sealY, sealZ] = this.sealOrigin;
+  //     anchors.push({
+  //       name: 'Seal',
+  //       point: [sealX + width / 2, sealY + length / 2, sealZ + Math.max(1, roof) / 2],
+  //       normal: [0, 0, 1],
+  //     });
+  //   }
 
-    const projected = anchors
-      .filter((anchor) => this.isFacingCamera(anchor.point, anchor.normal))
-      .map((anchor) => {
-        const screenPos = this.projectWorldToScreen(anchor.point, container);
-        return screenPos
-          ? {
-            name: anchor.name,
-            x: screenPos[0],
-            y: screenPos[1],
-          }
-          : null;
-      })
-      .filter((item): item is SurfaceLabel => item !== null);
+  //   const projected = anchors
+  //     .filter((anchor) => this.isFacingCamera(anchor.point, anchor.normal))
+  //     .map((anchor) => {
+  //       const screenPos = this.projectWorldToScreen(anchor.point, container);
+  //       return screenPos
+  //         ? {
+  //           name: anchor.name,
+  //           x: screenPos[0],
+  //           y: screenPos[1],
+  //         }
+  //         : null;
+  //     })
+  //     .filter((item): item is SurfaceLabel => item !== null);
 
-    this.surfaceLabels.set(projected);
-  }
+  //   this.surfaceLabels.set(projected);
+  // }
 
   private setHoveredFeature(feature: FeatureTarget | null): void {
-    const currentHovered = this.hoveredFeature;
-    if (
-      feature?.type === currentHovered?.type &&
-      (!feature ||
-        !('index' in feature) ||
-        !currentHovered ||
-        !('index' in currentHovered) ||
-        feature.index === currentHovered.index)
-    ) {
-      return;
-    }
+    const current = this.hoveredFeature;
+    const sameKey = (a: FeatureTarget | null, b: FeatureTarget | null) =>
+      a && b && (a.group && b.group ? a.group === b.group : a.id === b.id);
+    if (sameKey(feature, current)) return;
 
     this.hoveredFeature = feature;
     const container = this.containerRef?.nativeElement;
-    if (container) {
-      container.style.cursor = feature ? 'pointer' : '';
-    }
+    if (container) container.style.cursor = feature ? 'pointer' : '';
     this.refreshRenderEntities();
   }
 
+
   private featureAtScreenPosition(event: PointerEvent): FeatureTarget | null {
     const container = this.containerRef?.nativeElement;
-    if (!container) {
-      return null;
-    }
-
+    if (!container) return null;
     const rect = container.getBoundingClientRect();
+    const ray = this.screenPointToRay(event.clientX - rect.left, event.clientY - rect.top, container);
 
-    const ray = this.screenPointToRay(
-      event.clientX - rect.left,
-      event.clientY - rect.top,
-      container,
-    );
+    const EPSILON = 1e-4; // world units — hits within this range of each other are "the same point"
 
-    let closest: {
-      feature: FeatureTarget;
-      distance: number;
-    } | null = null;
+    let closest: { id: string; group?: string; type: FeatureTarget['type']; index?: number; operation: Operation; distance: number } | null = null;
 
     for (const candidate of this.featureCandidates) {
       for (const triangle of candidate.triangles) {
-        const distance = this.rayTriangleIntersection(
-          ray.origin,
-          ray.direction,
-          triangle,
-        );
+        const distance = this.rayTriangleIntersection(ray.origin, ray.direction, triangle);
+        if (distance === null) continue;
 
-        if (
-          distance !== null &&
-          (!closest || distance < closest.distance)
-        ) {
-          closest = {
-            feature: candidate.feature,
-            distance,
-          };
+        if (!closest) {
+          closest = { id: candidate.id, group: candidate.group, type: candidate.type, operation: candidate.operation, distance };
+          continue;
         }
+
+        const delta = distance - closest.distance;
+
+        if (delta < -EPSILON) {
+          // clearly closer — always wins
+          closest = { id: candidate.id, group: candidate.group, type: candidate.type, operation: candidate.operation, distance };
+        } else if (Math.abs(delta) <= EPSILON) {
+          // tie — prefer the subtract piece (hole) over the shell it's cut into
+          if (candidate.operation === 'subtract' && closest.operation !== 'subtract') {
+            closest = { id: candidate.id, group: candidate.group, type: candidate.type, operation: candidate.operation, distance };
+          }
+        }
+        // delta > EPSILON: existing closest is genuinely nearer, keep it
       }
     }
 
-    return closest?.feature ?? null;
+    return closest ? { id: closest.id, group: closest.group, type: closest.type } : null;
   }
-
-  // private buildFeatureCandidates(params: Params): FeatureCandidate[] {
-  //   const candidates: FeatureCandidate[] = [
-  //     this.createFeatureCandidate(
-  //       { type: 'base' },
-  //       translate(
-  //         this.baseOrigin,
-  //         base(params),
-  //       )
-  //     ),
-  //     this.createFeatureCandidate(
-  //       { type: 'lid' },
-  //       translate(
-  //         this.lidOrigin,
-  //         lidWithHoles(params),
-  //       ),
-  //     ),
-  //     this.createFeatureCandidate(
-  //       { type: 'lidInsert' },
-  //       translate(this.lidOrigin, lidInsert(params)),
-  //     ),
-  //   ];
-
-  //   if (params.waterProof) {
-  //     candidates.push(
-  //       this.createFeatureCandidate(
-  //         { type: 'waterproof' },
-  //         translate(this.sealOrigin, waterProofSeal(params)),
-  //       ),
-  //     );
-  //   }
-
-  //   if (params.wallMounts) {
-  //     candidates.push(
-  //       this.createFeatureCandidate(
-  //         { type: 'wallMount' },
-  //         translate(this.baseOrigin, flanges(params)),
-  //       ),
-  //     );
-  //   }
-
-  //   params.holes.forEach((hole, index) => {
-  //     const origin = hole.surface === 'top' ? this.lidOrigin : this.baseOrigin;
-  //     candidates.push(
-  //       this.createFeatureCandidate(
-  //         { type: 'hole', index },
-  //         translate(origin, holes({ ...params, holes: [hole] }, [hole.surface])),
-  //       ),
-  //     );
-  //   });
-
-  //   if (params.lidScrews) {
-  //     candidates.push(
-  //       this.createFeatureCandidate(
-  //         { type: 'screwHole' },
-  //         union(
-  //           translate(this.lidOrigin, union(lidScrewHoles(params))),
-  //           translate(this.baseOrigin, union(baseScrewHoles(params))),
-  //         ),
-  //       )
-  //     );
-  //   }
-
-  //   const numOfClamps = params.cableClamps.length;
-  //   params.cableClamps.forEach((clamp, index) => {
-  //     const clampBase = this.place(cableClampFeature(clamp), params);
-  //     let clampTop = spacedCableClampTop(clamp, SPACING, numOfClamps, index);
-  //     clampTop = this.correctForClampTops(clampTop);
-  //     candidates.push(
-  //       this.createFeatureCandidate(
-  //         { type: 'cableClamp', index },
-  //         union(clampBase, clampTop)
-  //       )
-  //     )
-  //   });
-
-  //   return candidates;
-  // }
 
 
   private createFeatureCandidate(feature: FeatureTarget, geometry: Geom3): FeatureCandidate {
@@ -1031,40 +837,24 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
   }
 
   private refreshRenderEntities(): void {
-    if (!this.renderOptions) {
-      return;
-    }
+    if (!this.renderOptions) return;
 
     const hovered = this.hoveredFeature;
-    const candidate = hovered
-      ? this.featureCandidates.find(
-        (item) =>
-          item.feature.type === hovered.type &&
-          (!('index' in item.feature) ||
-            !('index' in hovered) ||
-            item.feature.index === hovered.index),
-      )
-      : null;
-    const highlightEntities = candidate
-      ? (entitiesFromSolids({ color: [1, 0.62, 0, 1] }, candidate.geometry) as Entity[]).map(
-        (entity) => ({
-          ...entity,
-          // Feature geometry frequently shares faces with the enclosure. Bias the
-          // overlay toward the camera to avoid depth fighting with the blue solid.
-          extras: {
-            polygonOffset: {
-              enable: true,
-              offset: { factor: -1, units: -1 },
-            },
-          },
-        }),
-      )
+    const matches = hovered
+      ? this.featureCandidates.filter((c) =>
+        hovered.group ? c.group === hovered.group : c.id === hovered.id)
       : [];
+
+    const highlightEntities = matches.flatMap((c) =>
+      (entitiesFromSolids({ color: [1, 0.62, 0, 1] }, c.geometry) as Entity[]).map((entity) => ({
+        ...entity,
+        extras: { polygonOffset: { enable: true, offset: { factor: -1, units: -1 } } },
+      })),
+    );
 
     this.renderOptions.entities = [...this.baseRenderEntities, ...highlightEntities];
     this.updateView = true;
   }
-
   private isFacingCamera(point: Vec3Tuple, normal: Vec3Tuple): boolean {
     const cameraPosition = this.camera.position as Vec3Tuple;
     const toCamera = this.normalize(this.subtract(cameraPosition, point));
@@ -1140,349 +930,34 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
     return [vector[0] / magnitude, vector[1] / magnitude, vector[2] / magnitude];
   }
 
-
-  private calculateOrigins(params: Params) {
-    const { width, length, waterProof } = params;
-
-    this.baseOrigin = [0, 0, 0];
-    this.lidOrigin = vector3Add(this.baseOrigin, [width + SPACING, 0, 0])
-    this.sealOrigin = vector3Add(this.baseOrigin, [- width - SPACING, 0, 0]);
-
-    let clampTopOrigin = waterProof ? this.sealOrigin : this.baseOrigin;
-    this.clampTopsOrigin = vector3Add(clampTopOrigin, [- width * .7 - SPACING, 0, 0]);
-  }
-
-  private place(
-    feature: Feature,
-    params: Params,
-  ): Geom3;
-
-  private place(
-    features: Feature[],
-    params: Params,
-  ): Geom3;
-
-  private place(
-    featureOrFeatures: Feature | Feature[],
-    params: Params,
-  ): Geom3 {
-    if (Array.isArray(featureOrFeatures)) {
-      const geometries = featureOrFeatures.map((feature) =>
-        this.place(feature, params),
-      );
-
-      return geometries.length === 1
-        ? geometries[0]
-        : union(geometries);
-    }
-
-    const { geometry, x, y, z } = featureOrFeatures;
-    const { floor, height, length, width, wall, waterProof, insertThickness, insertClearance, roof } = params;
-
-    const surface: Surface = featureOrFeatures.surface ?? 'bottom';
-    const innerWallThickness = waterProof ? wall * 2 + insertClearance * 2 + insertThickness : wall;
-    const wallX = width / 2;
-    const wallY = length / 2;
-    const wallZ = height / 2;
-
-    let ret: Geom3;
-    switch (surface) {
-      case 'plane':
-        ret = translate([x, y, (z ?? 0)], geometry);
-        break;
-
-      case 'bottom':
-        ret = translate([x, y, floor + (z ?? 0)], geometry);
-        break;
-
-      case 'front':
-        ret = translate(
-          [x, wallY - innerWallThickness - (z ?? 0), wallZ + y],
-          rotateX(degToRad(90), geometry),
-        );
-        break;
-
-      case 'back':
-        ret = translate(
-          [x, - wallY + innerWallThickness + (z ?? 0), wallZ + y],
-          rotateX(degToRad(-90), geometry),
-        );
-        break;
-
-      case 'right':
-        ret = translate(
-          [wallX - innerWallThickness - (z ?? 0), y, wallZ + x],
-          rotateY(degToRad(-90), geometry),
-        );
-        break;
-
-      case 'left':
-        ret = translate(
-          [- wallX + innerWallThickness + (z ?? 0), y, wallZ + x],
-          rotateY(degToRad(90), geometry),
-        );
-        break;
-
-      case 'top':
-        ret = translate(vector3Multiply(this.lidOrigin, [-1, 1, 1]), geometry);
-        ret = translate([x, y, roof + (z ?? 0)], ret);
-        break;
-
-      default:
-        ret = geometry;
-        break;
-    }
-
-    ret = mirror({ normal: [1, 0, 0] }, ret); // [-x,  y,  z]
-
-    return ret;
-  }
-
-
-  private extractModel(geometries: Geom3[]): Geom3 | null {
-    if (geometries.length === 0)
-      return null;
-    return geometries.length === 1 ? geometries[0] : union(geometries);
-  }
-
-
-  private pcbGeometryKey = '';
-
   private async renderModel(params: Params, diff: string[]): Promise<void> {
-    const {
-      waterProof,
-      pcbMounts: pcbMountParams,
-      internalWalls: internalWallParams,
-      cableClamps: cableClampParams,
-    } = params;
-
-    this.calculateOrigins(params);
-    this.featureCandidates = [];
-    const pcb = params.pcb;
 
     this.objects.updateAll(params);
 
-    // if (pcb.enabled) {
-    //   const geometryKey = `${pcb.width}|${pcb.length}|${pcb.screwOffset}|${pcb.surface}`;
-
-    //   if (
-    //     !this.store.has(pcb.id) ||
-    //     this.pcbGeometryKey !== geometryKey
-    //   ) {
-    //     const feature = pcbFeature(params);
-
-    //     this.store.set(
-    //       pcb.id,
-    //       colorize([0.2, 0.6, 1.0, 0.5], feature.geometry),
-    //       feature.surface,
-    //       [pcb.x, pcb.y, pcb.z],
-    //     );
-
-    //     this.pcbGeometryKey = geometryKey;
-    //   } else {
-    //     this.store.setPosition(pcb.id, [pcb.x, pcb.y, pcb.z]);
-    //   }
-
-    //   const feature = this.store.getFeature(pcb.id);
-
-    //   if (feature) {
-    //     this.pcbModel = this.place(feature, params);
-    //     this.pcbModelHighlight = this.createFeatureCandidate(
-    //       { type: 'pcb' },
-    //       this.pcbModel,
-    //     );
-    //   }
-    // } else {
-    //   this.pcbModel = null;
-    //   this.pcbModelHighlight = null;
-    // }
-
-    // if (this.checkDeps(diff, baseDeps)) {
-    //   // this.baseModel = this.place(baseFeature(params), params);
-    //   // this.baseModelHighlight = this.createFeatureCandidate({ type: 'base' }, this.baseModel);
-    //   if (params.wallMounts) {
-    //     this.wallMountModel = this.place(flangeFeatures(params), params);
-    //     this.wallMountModelHighlight = this.createFeatureCandidate({ type: 'wallMount' }, this.wallMountModel);
-    //   } else {
-    //     this.wallMountModel = null;
-    //     this.wallMountModelHighlight = null;
-    //   }
-    //   // params.holes.forEach((h, index) => {
-    //   //   if (h.surface !== 'top') {
-    //   //     this.holeModelHighlight.push(this.createFeatureCandidate(
-    //   // { type: 'hole', index },
-    //   //       this.place(holeFeature(params, h), params),
-    //   //     ));
-    //   //   }
-    //   // });
-    //   const lidHoles = lidScrewHoles(params);
-    //   const baseHoles = baseScrewHoles(params);
-    //   const lidBosses = screwBosses(params);
-    //   if (params.lidScrews && lidHoles && baseHoles) {
-    //     let h = union(
-    //       translate(this.lidOrigin, lidHoles),
-    //       translate(this.baseOrigin, baseHoles),
-    //     )
-
-    //     if (lidBosses) {
-    //       h = union(h, translate(this.lidOrigin, lidBosses));
-    //     }
-    //     this.screwHoleModelHighlight = this.createFeatureCandidate({ type: 'screwHole' }, h);
-    //   }
-    // }
-
-    // if (this.checkDeps(diff, lidDeps)) {
-    //   this.lidModel = translate(this.lidOrigin, this.place(lidFeature(params), params));
-    //   this.lidModelHighlight = this.createFeatureCandidate(
-    //     { type: 'lid' },
-    //     translate(this.lidOrigin, this.place(lidWithHolesFeature(params), params)));
-    //   this.lidInsertModelHighlight = this.createFeatureCandidate(
-    //     { type: 'lidInsert' },
-    //     translate(this.lidOrigin, this.place(lidInsertFeature(params), params)));
-
-    //   // params.holes.forEach((h, index) => {
-    //   //   if (h.surface === 'top') {
-    //   //     this.holeModelHighlight.push(this.createFeatureCandidate(
-    //   //       { type: 'hole', index },
-    //   //       translate(this.lidOrigin, this.place(holeFeature(params, h), params))),
-    //   //     );
-    //   //   }
-    //   // });
-    // }
-
-    // if (this.checkDeps(diff, sealDeps)) {
-    //   if (waterProof) {
-    //     this.sealModel = translate(this.sealOrigin, this.place(waterProofSealFeature(params), params));
-    //     this.sealModelHighlight = this.createFeatureCandidate({ type: 'waterproof' }, this.sealModel);
-    //   } else {
-    //     this.sealModel = null;
-    //     this.sealModelHighlight = null;
-    //   }
-    // }
-
-    // if (this.checkDeps(diff, mountDeps)) {
-    //   const mounts: Geom3[] = [];
-    //   const highlights: FeatureCandidate[] = [];
-    //   params.pcbMounts.forEach((mount, index) => {
-    //     const m = this.place(pcbMountFeature(mount), params);
-    //     highlights.push(this.createFeatureCandidate({ type: 'pcbMount', index }, m));
-    //     mounts.push(m)
-    //   })
-    //   this.mountsModel = this.extractModel(mounts);
-    //   this.mountsModelHighlight = highlights;
-    // }
-
-
-    // if (this.checkDeps(diff, internalWallDeps)) {
-    //   const walls: Geom3[] = [];
-    //   const highlights: FeatureCandidate[] = [];
-    //   params.internalWalls.forEach((wall, index) => {
-    //     const w = this.place(internalWallFeature(wall), params)
-    //     walls.push(w);
-    //     // highlights.push(this.createFeatureCandidate({ type: 'internalWall', index }, w));
-    //   });
-    //   this.internalWallsModel = this.extractModel(walls);
-    //   this.internalWallsModelHighlight = highlights;
-    // }
-
-
-    // if (this.checkDeps(diff, cableClampDeps)) {
-    //   const clamps: Geom3[] = [];
-    //   const highlights: FeatureCandidate[] = [];
-    //   const numOfClamps = params.cableClamps.length;
-    //   params.cableClamps.forEach((clamp, index) => {
-    //     const clampBase = this.place(cableClampFeature(clamp), params);
-
-    //     let clampTop = spacedCableClampTop(clamp, SPACING, numOfClamps, index);
-    //     clampTop = translate(this.clampTopsOrigin, clampTop);
-
-    //     const clampPair = union(clampBase, clampTop);
-    //     clamps.push(clampPair);
-
-    //     // highlights.push(this.createFeatureCandidate({ type: 'cableClamp', index }, clampPair));
-    //   });
-    //   this.cableClampsModel = this.extractModel(clamps);
-    //   this.cableClampsModelHighlight = highlights;
-    // }
-
     const newModels: Geom3[] = [];
-    // if (this.lidModel) {
-    //   newModels.push(this.lidModel);
-    // }
-    if (this.baseModel) {
-      newModels.push(this.baseModel);
-    }
-    if (this.wallMountModel) {
-      newModels.push(this.wallMountModel);
-    }
-    if (this.sealModel) {
-      newModels.push(this.sealModel);
-    }
-    if (this.mountsModel) {
-      newModels.push(this.mountsModel);
-    }
-    if (this.internalWallsModel) {
-      newModels.push(this.internalWallsModel);
-    }
-    if (this.cableClampsModel) {
-      newModels.push(this.cableClampsModel);
-    }
-
     newModels.push(...this.objects.getModels())
 
     if (newModels.length === 0) {
       return;
     }
 
-    this.featureCandidates = [];
-    // if (this.lidModelHighlight) {
-    //   this.featureCandidates.push(this.lidModelHighlight);
-    // }
-    // if (this.lidInsertModelHighlight) {
-    //   this.featureCandidates.push(this.lidInsertModelHighlight);
-    // }
-    if (this.screwHoleModelHighlight) {
-      this.featureCandidates.push(this.screwHoleModelHighlight);
-    }
-    if (this.baseModelHighlight) {
-      this.featureCandidates.push(this.baseModelHighlight);
-    }
-    if (this.wallMountModelHighlight) {
-      this.featureCandidates.push(this.wallMountModelHighlight);
-    }
-    if (this.sealModelHighlight) {
-      this.featureCandidates.push(this.sealModelHighlight);
-    }
-    if (this.pcbModelHighlight) {
-      this.featureCandidates.push(this.pcbModelHighlight);
-    }
-    if (this.holeModelHighlight) {
-      this.featureCandidates.push(...this.holeModelHighlight);
-    }
-    if (this.mountsModelHighlight) {
-      this.featureCandidates.push(...this.mountsModelHighlight);
-    }
-    if (this.internalWallsModelHighlight) {
-      this.featureCandidates.push(...this.internalWallsModelHighlight);
-    }
-    if (this.cableClampsModelHighlight) {
-      this.featureCandidates.push(...this.cableClampsModelHighlight);
-    }
+    const modelEntities = newModels.flatMap((m) => entitiesFromSolids({}, m) as Entity[]);
 
-    const model = union(newModels);
-
-    const modelEntities = entitiesFromSolids({}, model) as Entity[];
-
-    if (this.pcbModel) {
-      modelEntities.push(...entitiesFromSolids({}, this.pcbModel));
-    }
-
-    const modelBounds = measureBoundingBox(model) as [Vec3Tuple, Vec3Tuple];
-    const gridEntity = this.buildGridEntity(params, modelBounds);
+    const bounds = newModels
+      .map((m) => measureBoundingBox(m) as [Vec3Tuple, Vec3Tuple])
+      .reduce((acc, [min, max]) => [
+        [Math.min(acc[0][0], min[0]), Math.min(acc[0][1], min[1]), Math.min(acc[0][2], min[2])],
+        [Math.max(acc[1][0], max[0]), Math.max(acc[1][1], max[1]), Math.max(acc[1][2], max[2])],
+      ], [[Infinity, Infinity, Infinity], [-Infinity, -Infinity, -Infinity]]);
+    const gridEntity = this.buildGridEntity(params, bounds);
     // The grid is a reference plane sitting under the model, so list it first
     // so it draws before the solid geometry.
     this.baseRenderEntities = gridEntity ? [gridEntity, ...modelEntities] : modelEntities;
-    // this.featureCandidates = this.buildFeatureCandidates(params);
+
+    this.featureCandidates = this.objects.getFeatureEntries().map((entry) => {
+      const c = this.createFeatureCandidate(entry, entry.geometry);
+      return { id: entry.id, group: entry.group, type: entry.type, geometry: entry.geometry, triangles: c.triangles, operation: entry.operation };
+    });
 
     // Re-frame the camera when the grid becomes visible (so it lands in view)
     // or when its size-affecting inputs change while it is on. Leave the user's
@@ -1502,13 +977,13 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
         glOptions: { container: this.containerRef.nativeElement },
       }) as (options?: RenderOptions) => void;
       this.setCameraProjection();
-      this.updateSurfaceLabels();
+      // this.updateSurfaceLabels();
       if (this.animationFrame === null) {
         this.updateAndRender();
       }
     } else {
       this.refreshRenderEntities();
-      this.updateSurfaceLabels();
+      // this.updateSurfaceLabels();
     }
   }
 }

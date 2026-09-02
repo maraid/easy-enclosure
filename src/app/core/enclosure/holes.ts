@@ -1,20 +1,13 @@
-import { rotate, translate, mirror } from '@jscad/modeling/src/operations/transforms';
-import { degToRad } from '@jscad/modeling/src/utils';
+import { Geom3 } from '@jscad/modeling/src/geometries/types';
 import { cuboid, cylinder } from '@jscad/modeling/src/primitives';
-import { union } from '@jscad/modeling/src/operations/booleans';
 
 import { Params } from '../params';
-import { Geom3 } from '@jscad/modeling/src/geometries/types';
-import { Vec3 } from '@jscad/modeling/src/maths/types';
-import { Surface, SURFACES } from '.';
-
 import { Hole } from '../params';
-import { Feature } from './feature';
 
 const TOP_HOLE_DEPTH_TOLERANCE = 0.2;
 
 
-export const hole2 = (
+export const hole = (
   {
     floor,
     roof,
@@ -36,12 +29,22 @@ export const hole2 = (
   const bottomThickness = floor;
 
   let holeDepth = 0;
-  if (surface === 'top') {
-    holeDepth = lidThickness;
-  } else if (surface === 'bottom') {
-    holeDepth = bottomThickness;
-  } else {
-    holeDepth = wallThickness;
+  switch (surface) {
+    case 'top':
+      holeDepth = lidThickness;
+      break;
+    case 'bottom':
+      holeDepth = bottomThickness;
+      break;
+    case 'left':
+    case 'right':
+    case 'front':
+    case 'back':
+    case 'plane':
+      holeDepth = wallThickness;
+      break;
+    default:
+      throw new Error(`Invalid surface: ${surface}`);
   }
 
   let geometry: Geom3;

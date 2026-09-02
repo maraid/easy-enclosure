@@ -43,28 +43,26 @@ export class ParamsFormComponent {
       this.activeTab.set(tabByType[feature.type]);
       setTimeout(() =>
         document
-          .getElementById(this.definitionId(feature))
+          .getElementById(feature.id)
           ?.scrollIntoView({ block: 'center', behavior: 'smooth' }),
       );
     });
   }
 
-  featureId(type: RenameableComponent, id: number | string): string {
-    return `feature-${type}-${id}`;
-  }
 
-  definitionId(feature: FeatureTarget): string {
-    if ('id' in feature) {
-      return this.featureId(feature.type, feature.id);
-    }
-    if (feature.type === 'lid') {
-      return 'definition-base';
-    }
-    if (feature.type === 'lidInsert') {
-      return 'definition-lid';
-    }
-    return `definition-${feature.type}`;
-  }
+
+  // definitionId(feature: FeatureTarget): string {
+  //   if ('id' in feature) {
+  //     return feature.id;
+  //   }
+  //   if (feature.type === 'lid') {
+  //     return 'definition-lid';
+  //   }
+  //   if (feature.type === 'lidInsert') {
+  //     return 'definition-lid-insert';
+  //   }
+  //   return `definition-${feature.type}`;
+  // }
 
   isSelected(type: RenameableComponent, id: string): boolean {
     const feature = this.state.selectedFeature();
@@ -379,12 +377,22 @@ export class ParamsFormComponent {
   }
 
   finishRenaming(type: RenameableComponent, id: string, name: string): void {
-    if (type === 'hole') {
-      this.updateHole(id, { name });
-    } else if (type === 'pcbMount') {
-      this.updatePcbMount(id, { name });
-    } else {
-      this.updateInternalWall(id, { name });
+    switch (type) {
+      case 'hole':
+        this.updateHole(id, { name });
+        break;
+      case 'pcbMount':
+        this.updatePcbMount(id, { name });
+        break;
+      case 'internalWall':
+        this.updateInternalWall(id, { name });
+        break;
+      case 'cableClamp':
+        this.updateCableClamp(id, { name });
+        break;
+      default:
+        console.warn(`Unknown component type: ${type}`);
+        break;
     }
     this.renamingItem.set(null);
   }

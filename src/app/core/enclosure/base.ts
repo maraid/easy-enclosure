@@ -4,31 +4,36 @@ import { Params } from '../params';
 import { clover, centeredHollowRoundCube, roundedCube } from './utils';
 import { waterProofSealCutout } from './waterproofseal';
 import { baseScrewHoles } from './screws';
-import { Feature } from './feature';
 import { translate } from '@jscad/modeling/src/operations/transforms';
 
 const { subtract, union } = booleans;
 
+export type BaseGeometryParams = Pick<
+  Params,
+  | 'length' | 'width' | 'height' | 'wall' | 'floor' | 'cornerRadius'
+  | 'insertThickness' | 'insertClearance' | 'waterProof' | 'lidScrews'
+  | 'sunkenLidScrewHeads' | 'baseLidScrewDiameter' | 'lidScrewDiameter' | 'lidScrewHeadDiameter'
+  | 'sealThickness' // consumed inside waterProofSealCutout — confirm against its real signature
+// | ...whatever baseScrewHoles actually reads, once uncommented
+>;
 
-const cloveredFrame = (params: Params) => {
-  const {
-    length,
-    width,
-    height,
-    wall,
-    floor,
-    cornerRadius,
-    insertThickness,
-    insertClearance,
-    sunkenLidScrewHeads,
-    baseLidScrewDiameter,
-    lidScrewDiameter,
-    lidScrewHeadDiameter
-  } = params;
-
+const cloveredFrame = ({
+  length,
+  width,
+  height,
+  wall,
+  floor,
+  cornerRadius,
+  insertThickness,
+  insertClearance,
+  sunkenLidScrewHeads,
+  baseLidScrewDiameter,
+  lidScrewDiameter,
+  lidScrewHeadDiameter,
+  waterProof,
+}: BaseGeometryParams) => {
   let _wall = wall;
-
-  if (params.waterProof) {
+  if (waterProof) {
     _wall = wall * 2 + insertClearance * 2 + insertThickness;
   }
 
@@ -50,54 +55,28 @@ const cloveredFrame = (params: Params) => {
       ),
     ),
   ));
-}
+};
 
-export const base = (params: Params) => {
-  const {
-    length,
-    width,
-    height,
-    wall,
-    floor,
-    cornerRadius,
-    insertThickness,
-    insertClearance,
-  } = params;
+export const base = (params: BaseGeometryParams) => {
+  const { length, width, height, wall, floor, cornerRadius, insertThickness, insertClearance, waterProof, lidScrews } = params;
 
   const body = [];
-  const subtracts = [];
 
   let _wall = wall;
-
-  if (params.waterProof) {
+  if (waterProof) {
     _wall = wall * 2 + insertClearance * 2 + insertThickness;
   }
 
-  if (params.lidScrews) {
-    body.push(cloveredFrame(params));
-    const screwHoles = baseScrewHoles(params);
-    if (screwHoles) {
-      subtracts.push(screwHoles);
-    }
+  if (lidScrews) {
+    return cloveredFrame(params);
+    // const screwHoles = baseScrewHoles(params);
+    // if (screwHoles) subtracts.push(screwHoles);
   } else {
-    body.push(centeredHollowRoundCube(width, length, height, _wall, floor, cornerRadius));
+    return centeredHollowRoundCube(width, length, height, _wall, floor, cornerRadius);
   }
-  const seal = waterProofSealCutout(params);
-  if (seal) {
-    subtracts.push(seal);
-  }
-  if (subtracts.length) {
-    return subtract(union(body), union(subtracts));
-  }
-  return union(body);
-};
 
-export const baseFeature = (params: Params): Feature => {
-  const geometry = base(params);
-  return {
-    geometry,
-    surface: 'plane',
-    x: 0,
-    y: 0,
-  };
-}
+  // const seal = waterProofSealCutout(params);
+  // if (seal) {
+  //   subtracts.push(seal);
+  // }
+};

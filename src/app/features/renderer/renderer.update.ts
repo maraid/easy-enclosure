@@ -1,24 +1,34 @@
 import { Geom3 } from '@jscad/modeling/src/geometries/types';
 import { degToRad } from '@jscad/modeling/src/utils';
 import { translate, mirror, rotateZ, rotateX, rotateY } from '@jscad/modeling/src/operations/transforms';
+import { subtract } from '@jscad/modeling/src/operations/booleans';
+
+import { FeatureTarget } from '../../core/state/enclosure-state.service';
 
 import { Surface } from '../../core/enclosure';
 import { PCBMount, PCB, Hole, InternalWall, CableClamp, Params } from '../../core/params';
 import { pcbMount } from '../../core/enclosure/pcbmount';
 import { pcb } from '../../core/enclosure/pcb';
-import { lidInsert, lidWithHoles } from '../../core/enclosure/lid';
-import { hole2 } from '../../core/enclosure/holes';
+import { lid, LidParams, lidInsert, LidInsertParams } from '../../core/enclosure/lid';
+import { hole } from '../../core/enclosure/holes';
 import { base } from '../../core/enclosure/base';
-import { waterProofSeal } from '../../core/enclosure/waterproofseal';
+import { waterProofSeal, waterProofSealCutout, WaterProofSealCutoutParams, WaterProofSealParams } from '../../core/enclosure/waterproofseal';
 import { internalWall } from '../../core/enclosure/internalwalls';
-import { flanges } from '../../core/enclosure/wallmount';
+import { flanges, FlangesGeometryParams } from '../../core/enclosure/wallmount';
+import { cableClamp, CableClampGeometryParams, cableClampTop, CableClampTopGeometryParams } from '../../core/enclosure/clamp';
+import { baseScrewHoles, BaseScrewHolesParams, lidScrewHoles, LidScrewHolesParams, screwBosses, ScrewBossParams, isSunken } from '../../core/enclosure/screws';
 
-// TODO: replace with real geometry-builder imports
-// import { holeFeature } from '../../core/enclosure/hole';
-// import { internalWallFeature } from '../../core/enclosure/internal-wall';
-// import { cableClampFeature } from '../../core/enclosure/cable-clamp';
 
 type Vec3Tuple = [number, number, number];
+
+
+export type FeatureEntry = {
+    id: string;
+    group?: string;
+    type: FeatureTarget['type'];
+    geometry: Geom3;
+    operation: Operation;
+};
 
 // ---------------------------------------------------------------------------
 // Placement
@@ -52,11 +62,6 @@ const PLACEMENT_PARAM_DEPS: (keyof Params)[] = [
 
 const SURFACE_ORIGIN: Partial<Record<Surface, Origin>> = {
     top: 'lid',
-    bottom: 'base',
-    left: 'base',
-    right: 'base',
-    front: 'base',
-    back: 'base',
 };
 
 const SPACING = 20;
@@ -65,22 +70,27 @@ const SPACING = 20;
 class Placer {
     SPACING = 20;
 
+    private baseOrigin(params: Params): Vec3Tuple { return [0, 0, 0]; }
+    private lidOrigin(params: Params): Vec3Tuple { return [-params.width - SPACING, 0, 0]; }
+    private sealOrigin(params: Params): Vec3Tuple { return [params.width + SPACING, 0, 0]; }
+
     private origins: Record<Origin, OriginStrategy> = {
-        base: () => ({ translate: [0, 0, 0] }),
+        base: (params) => ({ translate: this.baseOrigin(params) }),
 
         lid: (params) => ({
-            translate: [-params.width - SPACING, 0, 0],
+            translate: this.lidOrigin(params),
         }),
 
         seal: (params) => ({
-            translate: [params.width + SPACING, 0, 0],
+            translate: this.sealOrigin(params),
         }),
 
         clampTops: (params) => {
-            const base: Vec3Tuple = params.waterProof
-                ? [params.width + SPACING, 0, 0]      // = seal origin
-                : [0, 0, 0];                            // = base origin
-            return { translate: [base[0] - params.width * 0.7 - SPACING, base[1], base[2]] };
+            base(params);
+            const refOrigin: Vec3Tuple = params.waterProof
+                ? this.sealOrigin(params)
+                : this.baseOrigin(params);
+            return { translate: [refOrigin[0] + params.width / 2 + SPACING, refOrigin[1], refOrigin[2]] };
         },
     };
 
@@ -93,6 +103,7 @@ class Placer {
         const surface = placement.surface ?? 'bottom';
         const origin = SURFACE_ORIGIN[surface] ?? placement.origin ?? 'base';
 
+        const start = performance.now();
         let ret = this.placeOnSurface(geometry, placement, params);
 
         const strategy = this.origins[origin];
@@ -102,6 +113,8 @@ class Placer {
         ret = translate(strategy(params).translate, ret);
 
         ret = mirror({ normal: [1, 0, 0] }, ret);
+        const elapsed = performance.now() - start;
+        console.log(`Execution time placeOnSurface: ${elapsed.toFixed(3)} ms`);
         return ret;
     }
 
@@ -161,7 +174,7 @@ class Placer {
 // BaseComponentUpdater: caches built geometry AND placed geometry separately
 // ---------------------------------------------------------------------------
 
-type Operation = 'union' | 'subtract';
+export type Operation = 'union' | 'subtract';
 
 abstract class BaseComponentUpdater<T = any> {
     protected m_geometry: Geom3 | null = null;
@@ -169,29 +182,40 @@ abstract class BaseComponentUpdater<T = any> {
     protected m_placedGeometry: Geom3 | null = null;
     protected m_placementKey = '';
 
+    public type: FeatureTarget['type'] = 'base';
+
     public readonly origin: Origin;
     public readonly operation: Operation;
+    public readonly group?: string;
     private readonly toArgs: (obj: T, params: Params) => unknown[];
     private readonly placementFn: (obj: T) => PlacementFields;
+    public readonly attachesToShell: boolean;
+
 
     constructor(
         obj: T,
         params: Params,
         private readonly geometryFn: (...args: any[]) => Geom3,
+        type: FeatureTarget['type'],
         options: {
             toArgs?: (obj: T, params: Params) => unknown[];
             origin?: Origin;
             operation?: Operation;
             placementFn?: (obj: T) => PlacementFields;
+            group?: string;
+            attachesToShell?: boolean; // true only for pieces that must be unioned into the base/lid solid
         } = {},
     ) {
+        this.type = type;
         this.toArgs = options.toArgs ?? ((o) => [o]);
         this.origin = options.origin ?? 'base';
         this.operation = options.operation ?? 'union';
+        this.group = options.group;
         this.placementFn = options.placementFn ?? ((o: any) => ({
             x: o.x, y: o.y, z: o.z, surface: o.surface, rotation: o.rotation,
         }));
         this.ensureGeometry(obj, params);
+        this.attachesToShell = options.attachesToShell ?? false;
     }
 
     getGeometry(): Geom3 | null {
@@ -199,7 +223,10 @@ abstract class BaseComponentUpdater<T = any> {
     }
 
     public update(obj: T, params: Params): void {
+        const start = performance.now();
         this.ensureGeometry(obj, params);
+        const elapsed = performance.now() - start;
+        console.log(`Execution time ensureGeometry: ${elapsed.toFixed(3)} ms`);
     }
 
     protected ensureGeometry(obj: T, params: Params): void {
@@ -208,14 +235,17 @@ abstract class BaseComponentUpdater<T = any> {
 
         if (this.m_geometry === null || this.m_geometryKey !== newKey) {
             this.m_geometryKey = newKey;
+            const start = performance.now();
             this.m_geometry = this.geometryFn(...args);
+            const elapsed = performance.now() - start;
+            console.log(`Execution time geometryFn: ${elapsed.toFixed(3)} ms`);
             this.m_placedGeometry = null;
         }
+
     }
 
     getPlaced(obj: T, params: Params, placer: Placer): Geom3 | null {
         if (this.m_geometry === null) return null;
-
         const fields = this.placementFn(obj);
         const paramsKey = PLACEMENT_PARAM_DEPS.map((k) => params[k]).join('|');
         const newKey = `${JSON.stringify(fields)}::${paramsKey}`;
@@ -224,8 +254,11 @@ abstract class BaseComponentUpdater<T = any> {
             this.m_placedGeometry = placer.place(this.m_geometry, { ...fields, origin: this.origin }, params);
             this.m_placementKey = newKey;
         }
-
         return this.m_placedGeometry;
+    }
+
+    placementCacheKey(): string {
+        return `${this.m_geometryKey}::${this.m_placementKey}`;
     }
 }
 
@@ -235,17 +268,74 @@ abstract class BaseComponentUpdater<T = any> {
 
 class BaseUpdater extends BaseComponentUpdater<Params> {
     constructor(params: Params) {
-        super(params, params, base, {
+        super(params, params, base, 'base', {
+            toArgs: (_, p) => [{
+                length: p.length,
+                width: p.width,
+                height: p.height,
+                wall: p.wall,
+                floor: p.floor,
+                cornerRadius: p.cornerRadius,
+                insertThickness: p.insertThickness,
+                insertClearance: p.insertClearance,
+                waterProof: p.waterProof,
+                lidScrews: p.lidScrews,
+                baseLidScrewDiameter: p.baseLidScrewDiameter,
+                lidScrewDiameter: p.lidScrewDiameter,
+                sunkenLidScrewHeads: p.sunkenLidScrewHeads,
+                lidScrewHeadDiameter: p.lidScrewHeadDiameter,
+                sealThickness: p.sealThickness,
+            }],
+            attachesToShell: true,
             placementFn: () => ({ x: 0, y: 0, surface: 'plane' }),
-            // origin defaults to 'base', operation defaults to 'union' — no need to set either
+
         });
     }
 }
 
 class SealUpdater extends BaseComponentUpdater<Params> {
     constructor(params: Params) {
-        super(params, params, waterProofSeal, {
+        super(params, params, waterProofSeal, 'waterproof', {
             origin: 'seal',
+            toArgs: (_, p): [WaterProofSealParams] => [{
+                length: p.length,
+                width: p.width,
+                wall: p.wall,
+                baseLidScrewDiameter: p.baseLidScrewDiameter,
+                sealThickness: p.sealThickness,
+                insertThickness: p.insertThickness,
+                insertClearance: p.insertClearance,
+                cornerRadius: p.cornerRadius,
+                lidScrewDiameter: p.lidScrewDiameter,
+                sunkenLidScrewHeads: p.sunkenLidScrewHeads,
+                lidScrewHeadDiameter: p.lidScrewHeadDiameter,
+            }],
+            placementFn: () => ({ x: 0, y: 0, surface: 'plane' }),
+        });
+    }
+}
+
+class SealCutoutUpdater extends BaseComponentUpdater<Params> {
+    constructor(params: Params) {
+        super(params, params, waterProofSealCutout, 'waterproof', {
+            toArgs: (_, p): [WaterProofSealCutoutParams] => [{
+                length: p.length,
+                width: p.width,
+                height: p.height,
+                wall: p.wall,
+                insertThickness: p.insertThickness,
+                insertHeight: p.insertHeight,
+                sealThickness: p.sealThickness,
+                insertClearance: p.insertClearance,
+                cornerRadius: p.cornerRadius,
+                baseLidScrewDiameter: p.baseLidScrewDiameter,
+                lidScrewDiameter: p.lidScrewDiameter,
+                sunkenLidScrewHeads: p.sunkenLidScrewHeads,
+                lidScrewHeadDiameter: p.lidScrewHeadDiameter,
+            }],
+            origin: 'base',
+            operation: 'subtract',
+            attachesToShell: true,
             placementFn: () => ({ x: 0, y: 0, surface: 'plane' }),
         });
     }
@@ -253,22 +343,44 @@ class SealUpdater extends BaseComponentUpdater<Params> {
 
 class PcbUpdater extends BaseComponentUpdater<PCB> {
     constructor(item: PCB, params: Params) {
-        super(item, params, pcb); // default toArgs = (o) => [o]
+        super(item, params, pcb, 'pcb', {
+            toArgs: (o) => [{ width: o.width, length: o.length, screwOffset: o.screwOffset }],
+        });
     }
 }
 
 class MountUpdater extends BaseComponentUpdater<PCBMount> {
-    constructor(m: PCBMount, params: Params) {
-        super(m, params, pcbMount); // unaffected — omits options entirely, defaults apply
+    constructor(item: PCBMount, params: Params) {
+        super(item, params, pcbMount, 'pcbMount', {
+            toArgs: (o) => [{
+                height: o.height,
+                outerDiameter: o.outerDiameter,
+                screwDiameter: o.screwDiameter,
+            }],
+        });
+    }
+}
+
+class InternalWallUpdater extends BaseComponentUpdater<InternalWall> {
+    constructor(item: InternalWall, params: Params) {
+        super(item, params, internalWall, 'internalWall', {
+            toArgs: (o) => [{
+                height: o.height,
+                length: o.length,
+                thickness: o.thickness,
+            }],
+            placementFn: (o) => ({ x: o.x, y: o.y, surface: o.surface, rotation: o.rotation }),
+        });
     }
 }
 
 class HoleUpdater extends BaseComponentUpdater<Hole> {
     constructor(item: Hole, params: Params) {
         const surfaceOrigin: Origin = item.surface === 'top' ? 'lid' : 'base';
-        super(item, params, hole2, {
+        super(item, params, hole, 'hole', {
             origin: surfaceOrigin,
             operation: 'subtract',
+            attachesToShell: true,
             toArgs: (hole, p) => [
                 {
                     floor: p.floor,
@@ -290,15 +402,88 @@ class HoleUpdater extends BaseComponentUpdater<Hole> {
     }
 }
 
-class InternalWallUpdater extends BaseComponentUpdater<InternalWall> {
-    constructor(item: InternalWall, params: Params) {
-        super(item, params, internalWall);
+class BaseScrewHolesUpdater extends BaseComponentUpdater<Params> {
+    constructor(params: Params) {
+        super(params, params, baseScrewHoles, 'screwHole', {
+            origin: 'base',
+            operation: 'subtract',
+            attachesToShell: true,
+            toArgs: (_, p): [BaseScrewHolesParams] => [{
+                length: p.length,
+                width: p.width,
+                height: p.height,
+                wall: p.wall,
+                cornerRadius: p.cornerRadius,
+                sunkenLidScrewHeads: p.sunkenLidScrewHeads,
+                lidScrewDiameter: p.lidScrewDiameter,
+                lidScrewHeadDiameter: p.lidScrewHeadDiameter,
+                lidScrewHeadDepth: p.lidScrewHeadDepth,
+                boreHoleClearance: p.boreHoleClearance,
+                baseLidScrewDiameter: p.baseLidScrewDiameter,
+            }],
+            placementFn: () => ({ x: 0, y: 0, surface: 'plane' }),
+            group: 'screwHoles',
+        });
+    }
+}
+
+class LidScrewHolesUpdater extends BaseComponentUpdater<Params> {
+    constructor(params: Params) {
+        super(params, params, lidScrewHoles, 'screwHole', {
+            origin: 'lid',
+            operation: 'subtract',
+            attachesToShell: true,
+            toArgs: (_, p): [LidScrewHolesParams] => [{
+                width: p.width,
+                length: p.length,
+                roof: p.roof,
+                wall: p.wall,
+                cornerRadius: p.cornerRadius,
+                lidScrewDiameter: p.lidScrewDiameter,
+                sunkenLidScrewHeads: p.sunkenLidScrewHeads,
+                lidScrewHeadDiameter: p.lidScrewHeadDiameter,
+                lidScrewHeadDepth: p.lidScrewHeadDepth,
+            }],
+            placementFn: () => ({ x: 0, y: 0, surface: 'plane' }),
+            group: 'screwHoles',
+        });
+    }
+}
+
+class LidScrewBossUpdater extends BaseComponentUpdater<Params> {
+    constructor(params: Params) {
+        super(params, params, screwBosses, 'screwHole', {
+            origin: 'lid',
+            attachesToShell: true,
+
+            toArgs: (_, p): [ScrewBossParams] => [{
+                width: p.width,
+                length: p.length,
+                roof: p.roof,
+                wall: p.wall,
+                cornerRadius: p.cornerRadius,
+                lidScrewDiameter: p.lidScrewDiameter,
+                sunkenLidScrewHeads: p.sunkenLidScrewHeads,
+                lidScrewHeadDiameter: p.lidScrewHeadDiameter,
+                lidScrewHeadDepth: p.lidScrewHeadDepth,
+            }],
+            placementFn: () => ({ x: 0, y: 0, surface: 'plane' }),
+            group: 'screwHoles',
+        });
     }
 }
 
 class WallMountUpdater extends BaseComponentUpdater<Params> {
     constructor(params: Params) {
-        super(params, params, flanges, {
+        super(params, params, flanges, 'wallMount', {
+
+            toArgs: (_, p): [FlangesGeometryParams] => [{
+                length: p.length,
+                width: p.width,
+                cornerRadius: p.cornerRadius,
+                wallMountScrewDiameter: p.wallMountScrewDiameter,
+                wallMountCount: p.wallMountCount,
+            }],
             placementFn: () => ({ x: 0, y: 0, surface: 'plane' }),
         });
     }
@@ -306,93 +491,209 @@ class WallMountUpdater extends BaseComponentUpdater<Params> {
 
 class LidInsertUpdater extends BaseComponentUpdater<Params> {
     constructor(params: Params) {
-        super(params, params, lidInsert, {
+        super(params, params, lidInsert, 'lidInsert', {
             origin: 'lid',
-            placementFn: () => ({ x: 0, y: 0, surface: 'top' }),
+            toArgs: (_, p): [LidInsertParams] => [{
+                width: p.width,
+                length: p.length,
+                wall: p.wall,
+                lidScrews: p.lidScrews,
+                cornerRadius: p.cornerRadius,
+                insertThickness: p.insertThickness,
+                insertHeight: p.insertHeight,
+                insertClearance: p.insertClearance,
+                baseLidScrewDiameter: p.baseLidScrewDiameter,
+                lidScrewDiameter: p.lidScrewDiameter,
+                sunkenLidScrewHeads: p.sunkenLidScrewHeads,
+                lidScrewHeadDiameter: p.lidScrewHeadDiameter,
+            }],
+            placementFn: () => ({ x: 0, y: 0, surface: 'plane' }),
         });
     }
 }
 
 class LidUpdater extends BaseComponentUpdater<Params> {
     constructor(params: Params) {
-        super(params, params, lidWithHoles, {
+        super(params, params, lid, 'lid', {
             origin: 'lid',
+            attachesToShell: true,
+            toArgs: (_, p): [LidParams] => [{
+                width: p.width,
+                length: p.length,
+                roof: p.roof,
+                cornerRadius: p.cornerRadius,
+            }],
             placementFn: () => ({ x: 0, y: 0, surface: 'plane' }),
         });
     }
 }
+
+class CableClampUpdater extends BaseComponentUpdater<CableClamp> {
+    constructor(item: CableClamp, params: Params) {
+        super(item, params, cableClamp, 'cableClamp', {
+            toArgs: (o): [CableClampGeometryParams] => [{
+                length: o.length,
+                mountHeight: o.mountHeight,
+                mountOuterDiameter: o.mountOuterDiameter,
+                mountScrewDiameter: o.mountScrewDiameter,
+                wallHeight: o.wallHeight,
+                wallThickness: o.wallThickness,
+            }],
+            group: item.id,
+        });
+    }
+}
+
+type CableClampTopArg = { clamp: CableClamp; index: number; total: number };
+
+class CableClampTopUpdater extends BaseComponentUpdater<CableClampTopArg> {
+    constructor(arg: CableClampTopArg, params: Params) {
+        super(arg, params, cableClampTop, 'cableClamp', {
+            toArgs: (a): [CableClampTopGeometryParams] => [{
+                length: a.clamp.length,
+                mountOuterDiameter: a.clamp.mountOuterDiameter,
+                wallThickness: a.clamp.wallThickness,
+                topHeight: a.clamp.topHeight,
+                topScrewDiameter: a.clamp.topScrewDiameter,
+            }],
+            origin: 'clampTops',
+            group: arg.clamp.id,
+            placementFn: (a) => ({
+                x: 0,
+                y: (a.index - (a.total - 1) / 2) * SPACING,
+                z: 0,
+                rotation: 90, // fixed print-layout rotation
+                surface: 'plane',
+            }),
+        });
+    }
+}
+
 // ---------------------------------------------------------------------------
 // ObjectUpdater: orchestration only
 // ---------------------------------------------------------------------------
 
-import { union, subtract } from '@jscad/modeling/src/operations/booleans';
-
 export class ObjectUpdater {
     private objects = new Map<string, BaseComponentUpdater>();
     private models: Geom3[] = [];
+    private featureEntries: FeatureEntry[] = [];
     private placer = new Placer();
+
+    // per-updateAll scratch state — reset at the top of each call
+    private shellPieces = new Map<Origin, Geom3[]>();
+    private shellCuts = new Map<Origin, Geom3[]>();
+
+    getModels(): Geom3[] {
+        return this.models;
+    }
+
+    getFeatureEntries(): FeatureEntry[] {
+        return this.featureEntries;
+    }
 
     updateAll(params: Params): void {
         this.models = [];
+        this.featureEntries = [];
+        this.shellPieces = new Map();
+        this.shellCuts = new Map();
 
-        // origin -> pieces to union together, and pieces to subtract afterward
-        const unions = new Map<Origin, Geom3[]>();
-        const subtracts = new Map<Origin, Geom3[]>();
+        if (params.wallMounts) this.updateSingle('wallMount', WallMountUpdater, params, params);
+        this.updatePCB(params.pcb, params);
 
-        const collect = (updater: BaseComponentUpdater, obj: any) => {
-            const placed = updater.getPlaced(obj, params, this.placer);
-            if (!placed) return;
-            const bucket = updater.operation === 'subtract' ? subtracts : unions;
-            const list = bucket.get(updater.origin) ?? [];
-            list.push(placed);
-            bucket.set(updater.origin, list);
-        };
+        this.updateSingle('base', BaseUpdater, params, params);
 
-        const run = <T extends { id: string }, U extends BaseComponentUpdater>(
-            objects: T[],
-            Updater: new (obj: T, params: Params) => U,
-        ) => {
-            for (const obj of objects) {
-                const updater = this.getUpdated(obj.id, Updater, obj, params);
-                collect(updater, obj);
+        if (params.waterProof) {
+            this.updateSingle('seal', SealUpdater, params, params);
+            this.updateSingle('seal-cutout', SealCutoutUpdater, params, params);
+        }
+
+        if (params.lidScrews) this.updateSingle('base-screw-hole', BaseScrewHolesUpdater, params, params);
+        if (params.lidScrews) this.updateSingle('lid-screw-hole', LidScrewHolesUpdater, params, params);
+        if (params.lidScrews && isSunken(params)) this.updateSingle('lid-screw-boss', LidScrewBossUpdater, params, params);
+        this.updateSingle('lid', LidUpdater, params, params);
+        this.updateSingle('lid-insert', LidInsertUpdater, params, params);
+
+        this.updateMounts(params.pcbMounts, params);
+        this.updateInternalWalls(params.internalWalls, params);
+        this.updateHoles(params.holes, params);
+        this.updateCableClamps(params.cableClamps, params);
+
+        this.combineShells();
+    }
+
+    updatePCB(pcb: PCB, params: Params): void {
+        if (!pcb.enabled) return;
+        this.updateObjects([pcb], PcbUpdater, params);
+    }
+
+    updateMounts(mounts: PCBMount[], params: Params): void {
+        this.updateObjects(mounts, MountUpdater, params);
+    }
+
+    updateInternalWalls(walls: InternalWall[], params: Params): void {
+        this.updateObjects(walls, InternalWallUpdater, params);
+    }
+
+    updateHoles(holes: Hole[], params: Params): void {
+        this.updateObjects(holes, HoleUpdater, params);
+    }
+
+    updateCableClamps(clamps: CableClamp[], params: Params): void {
+        const total = clamps.length;
+        clamps.forEach((clamp, index) => {
+            this.updateSingle(clamp.id, CableClampUpdater, clamp, params);
+            this.updateSingle(`${clamp.id}-top`, CableClampTopUpdater, { clamp, index, total }, params);
+        });
+    }
+
+    // --- shared primitives -------------------------------------------------
+
+    private collect(updater: BaseComponentUpdater, obj: any, params: Params, id: string): void {
+        const placed = updater.getPlaced(obj, params, this.placer);
+        if (!placed) return;
+
+        this.featureEntries.push({ id, group: updater.group, type: updater.type, geometry: placed, operation: updater.operation });
+
+        if (!updater.attachesToShell) {
+            this.models.push(placed);
+            return;
+        }
+
+        const bucket = updater.operation === 'subtract' ? this.shellCuts : this.shellPieces;
+        const list = bucket.get(updater.origin) ?? [];
+        list.push(placed); // store placed geometry, not the updater
+        bucket.set(updater.origin, list);
+    }
+
+    private updateObjects<T extends { id: string }, U extends BaseComponentUpdater>(
+        objects: T[],
+        Updater: new (obj: T, params: Params) => U,
+        params: Params,
+    ): void {
+        for (const obj of objects) {
+            const updater = this.getUpdated(obj.id, Updater, obj, params);
+            this.collect(updater, obj, params, obj.id);
+        }
+    }
+
+    private updateSingle<U extends BaseComponentUpdater>(
+        id: string,
+        Updater: new (obj: any, params: Params) => U,
+        updateArg: any,
+        params: Params,
+    ): void {
+        const updater = this.getUpdated(id, Updater, updateArg, params);
+        this.collect(updater, updateArg, params, id);
+    }
+
+    private combineShells(): void {
+        for (const origin of this.shellPieces.keys()) {
+            const targets = this.shellPieces.get(origin)!;
+            const cuts = this.shellCuts.get(origin) ?? [];
+
+            for (const target of targets) {
+                this.models.push(cuts.length ? subtract(target, ...cuts) : target);
             }
-        };
-
-        const runSingle = <U extends BaseComponentUpdater>(
-            id: string,
-            Updater: new (obj: any, params: Params) => U,
-            updateArg: any,
-        ) => {
-            const updater = this.getUpdated(id, Updater, updateArg, params);
-            collect(updater, updateArg);
-        };
-
-        if (params.wallMounts) runSingle('wallMount', WallMountUpdater, params);
-        if (params.waterProof) runSingle('seal', SealUpdater, params);
-        if (params.pcb.enabled) run([params.pcb], PcbUpdater);
-
-        runSingle('base', BaseUpdater, params);
-        runSingle('lid', LidUpdater, params);
-        runSingle('lid-insert', LidInsertUpdater, params);
-
-        run(params.pcbMounts, MountUpdater);
-        run(params.holes, HoleUpdater);
-        run(params.internalWalls, InternalWallUpdater);
-
-        // for each origin group: union the union-pieces, subtract the subtract-pieces, push the result
-        const allOrigins = new Set<Origin>([...unions.keys(), ...subtracts.keys()]);
-        for (const origin of allOrigins) {
-            const unionPieces = unions.get(origin) ?? [];
-            const subtractPieces = subtracts.get(origin) ?? [];
-
-            if (unionPieces.length === 0) continue; // nothing to subtract from
-
-            let combined = unionPieces.length === 1 ? unionPieces[0] : union(unionPieces);
-            if (subtractPieces.length > 0) {
-                combined = subtract(combined, ...subtractPieces);
-            }
-
-            this.models.push(combined);
         }
     }
 
@@ -409,9 +710,5 @@ export class ObjectUpdater {
         }
         updater.update(updateArg, params);
         return updater;
-    }
-
-    getModels(): Geom3[] {
-        return this.models;
     }
 }
