@@ -1,7 +1,21 @@
 <form id="param-form" (submit)="$event.preventDefault()">
-  <button type="button" class="simple-reset-btn" (click)="resetToSimpleEnclosure()">
-    START FROM SCRATCH
-  </button>
+  <div style="display: flex; gap: 8px; width: 100%;">
+    <button
+      type="button"
+      class="simple-reset-btn"
+      (click)="resetToSimpleEnclosure()"
+    >
+      START FROM SCRATCH
+    </button>
+
+    <button
+      type="button"
+      class="simple-reset-btn"
+      (click)="resetToDefaultEnclosure()"
+    >
+      LOAD DEFAULT
+    </button>
+  </div>
 
   <div id="definition-base" class="accordian" [class.active]="activeTab() === 'generalTab'">
     <p class="accordian-header" (click)="setActiveTab('generalTab')">
@@ -416,7 +430,7 @@
         </div>
       </div>
       }
-      <button type="button" class="add-btn" (click)="addCableClamp()">ADD NEW MOUNT</button>
+      <button type="button" class="add-btn" (click)="addCableClamp()">ADD NEW CLAMP</button>
     </div>
   </div>
 
@@ -567,6 +581,16 @@
       <div class="input-group"> <label>Screw Offset</label> <input type="number" [value]="params().pcb.screwOffset"
           (keydown.enter)="$any($event.target).blur()"
           (blur)="updatePcb({ screwOffset: +$any($event.target).value })" />
+      </div>
+      <div class="input-group"> <label>Guides</label> <input type="checkbox" [checked]="params().pcb.guides"
+          (change)="updatePcb({ guides: $any($event.target).checked })" /> </div>
+      <div class="input-group"> <label>Guide Thickness</label> <input type="number" [value]="params().pcb.guideThickness"
+          (keydown.enter)="$any($event.target).blur()" (blur)="updatePcb({ guideThickness: +$any($event.target).value })" /> </div>
+      <div class="input-group"> <label>Guide Clearance</label> <input type="number" [value]="params().pcb.guideClearance"
+          (keydown.enter)="$any($event.target).blur()" (blur)="updatePcb({ guideClearance: +$any($event.target).value })" /> </div>
+      <div class="input-group"> <label>Guide Inset</label> <input type="number" [value]="params().pcb.guideInset"
+          (keydown.enter)="$any($event.target).blur()"
+          (blur)="updatePcb({ guideInset: +$any($event.target).value })" />
       </div>
     </div>
   </div>

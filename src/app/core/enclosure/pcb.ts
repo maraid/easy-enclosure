@@ -1,9 +1,13 @@
-import { booleans, transforms } from '@jscad/modeling';
+import { booleans } from '@jscad/modeling';
+import { rotateZ, translate } from '@jscad/modeling/src/operations/transforms';
+import { degToRad } from '@jscad/modeling/src/utils';
+
 import { subtract } from '@jscad/modeling/src/operations/booleans';
 import { cuboid, cylinder } from '@jscad/modeling/src/primitives';
 import { Geom3 } from '@jscad/modeling/src/geometries/types';
 
 import { PCB } from '../params';
+import { internalWall } from './internalwalls';
 
 const HEIGHT: number = 1;
 const PERF_DIAMETER: number = 1;
@@ -11,7 +15,6 @@ const PERF_SPACING: number = 2.54;
 const SCREWHOLE_DIAMETER: number = 2;
 
 const { union } = booleans;
-const { translate } = transforms;
 
 const perf = (): Geom3 => {
   return cylinder({
@@ -81,4 +84,35 @@ export const pcb = ({ width, length, screwOffset }: PcbGeometryParams) => {
     geometry = subtract(geometry, union(holes));
   }
   return subtract(geometry, screwHoles(width, length, screwOffset));
+};
+
+export type PcbGuideStubParams = Pick<
+  PCB,
+  'z' | 'width' | 'length' | 'guideClearance' | 'guideThickness' | 'guideInset'
+>;
+
+export const pcbGuideStub = ({
+  z,
+  width,
+  length,
+  guideClearance,
+  guideThickness,
+  guideInset,
+}: PcbGuideStubParams): Geom3 => {
+  const guideHeight = z + HEIGHT + guideClearance;
+  const guideLength = Math.min(width / 3, length / 3);
+  const guide = internalWall({
+    height: guideHeight,
+    length: guideLength,
+    thickness: guideThickness,
+  });
+
+  const guidePosY = length / 2 + guideInset + guideThickness / 2;
+  const guidePosX = width / 2 + guideInset + guideThickness / 2;
+
+  const back = translate([0, -guidePosY, 0], rotateZ(degToRad(90), guide));
+  const front = translate([0, guidePosY, 0], rotateZ(degToRad(90), guide));
+  const right = translate([guidePosX, 0, 0], guide);
+  const left = translate([-guidePosX, 0, 0], guide);
+  return union(front, back, left, right);
 };

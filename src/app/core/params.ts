@@ -13,7 +13,7 @@ export type Hole = {
 };
 
 export type PCBMount = {
-  id: string,
+  id: string;
   name?: string;
   surface: Surface;
   x: number;
@@ -62,6 +62,10 @@ export type PCB = {
   surface: Surface;
   screwOffset: number;
   enabled: boolean;
+  guides: boolean;
+  guideThickness: number; // e.g. 1mm
+  guideClearance: number; // how far above pcb.z the guide pokes up
+  guideInset: number;
 };
 
 export type Params = {
@@ -255,7 +259,11 @@ export const DEFAULT_PARAMS: Params = {
     length: 40,
     surface: 'bottom',
     screwOffset: 2,
-  }
+    guides: true,
+    guideClearance: 1.2,
+    guideThickness: 2,
+    guideInset: 0.1,
+  },
 };
 
 export const cloneParams = (params: Params): Params => {

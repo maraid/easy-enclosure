@@ -87,6 +87,11 @@ export class ParamsFormComponent {
     this.activeTab.set('generalTab');
   }
 
+  resetToDefaultEnclosure(): void {
+    this.state.resetToDefaultEnclosure();
+    this.activeTab.set('generalTab');
+  }
+
   setNumberParam<K extends keyof Params>(key: K, rawValue: string): void {
     if (!rawValue) {
       return;

@@ -281,6 +281,8 @@ select:focus-visible {
   box-shadow: 0 0 0 3px var(--focus-ring);
 }
 
+
+
 @media (max-width: 840px) {
   #param-form {
     right: 10px;

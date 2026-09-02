@@ -8,13 +8,14 @@ import {
   rotateY,
 } from '@jscad/modeling/src/operations/transforms';
 import { subtract } from '@jscad/modeling/src/operations/booleans';
+import { colorize } from '@jscad/modeling/src/colors';
 
 import { FeatureTarget } from '../../core/state/enclosure-state.service';
 
 import { Surface } from '../../core/enclosure';
 import { PCBMount, PCB, Hole, InternalWall, CableClamp, Params } from '../../core/params';
 import { pcbMount } from '../../core/enclosure/pcbmount';
-import { pcb } from '../../core/enclosure/pcb';
+import { pcb, pcbGuideStub, PcbGuideStubParams } from '../../core/enclosure/pcb';
 import { lid, LidParams, lidInsert, LidInsertParams } from '../../core/enclosure/lid';
 import { hole } from '../../core/enclosure/holes';
 import { base } from '../../core/enclosure/base';
@@ -24,7 +25,7 @@ import {
   WaterProofSealCutoutParams,
   WaterProofSealParams,
 } from '../../core/enclosure/waterproofseal';
-import { internalWall } from '../../core/enclosure/internalwalls';
+import { internalWall, InternalWallGeometryParams } from '../../core/enclosure/internalwalls';
 import { flanges, FlangesGeometryParams } from '../../core/enclosure/wallmount';
 import {
   cableClamp,
@@ -278,6 +279,7 @@ abstract class BaseComponentUpdater<T = any> {
   protected m_placedGeometry: Geom3 | null = null;
   protected m_placementKey = '';
 
+  private color: [number, number, number, number] | null = null;
   public type: FeatureTarget['type'] = 'base';
   public readonly exportable: boolean;
   public readonly origin: Origin;
@@ -300,8 +302,10 @@ abstract class BaseComponentUpdater<T = any> {
       group?: string;
       attachesToShell?: boolean; // true only for pieces that must be unioned into the base/lid solid
       exportable?: boolean;
+      color?: [number, number, number, number];
     } = {},
   ) {
+    this.color = options.color ?? null;
     this.type = type;
     this.exportable = options.exportable ?? true;
     this.toArgs = options.toArgs ?? ((o) => [o]);
@@ -335,7 +339,8 @@ abstract class BaseComponentUpdater<T = any> {
 
     if (this.m_geometry === null || this.m_geometryKey !== newKey) {
       this.m_geometryKey = newKey;
-      this.m_geometry = this.geometryFn(...args);
+      const geom = this.geometryFn(...args);
+      this.m_geometry = this.color ? colorize(this.color, geom) : geom;
       this.m_placedGeometry = null;
     }
   }
@@ -451,6 +456,7 @@ class PcbUpdater extends BaseComponentUpdater<PCB> {
     super(item, params, pcb, 'pcb', {
       toArgs: (o) => [{ width: o.width, length: o.length, screwOffset: o.screwOffset }],
       exportable: false,
+      color: [0.2, 0.5, 0.5, 0.3],
     });
   }
 }
@@ -568,6 +574,7 @@ class LidScrewBossUpdater extends BaseComponentUpdater<Params> {
   constructor(params: Params) {
     super(params, params, screwBosses, 'screwHole', {
       origin: 'lid',
+      attachesToShell: true,
       toArgs: (_, p): [ScrewBossParams] => [
         {
           width: p.width,
@@ -692,6 +699,25 @@ class CableClampTopUpdater extends BaseComponentUpdater<CableClampTopArg> {
   }
 }
 
+class PcbGuideUpdater extends BaseComponentUpdater<PCB> {
+  constructor(item: PCB, params: Params) {
+    super(item, params, pcbGuideStub, 'pcb', {
+      toArgs: (a): [PcbGuideStubParams] => [
+        {
+          z: a.z,
+          width: a.width,
+          length: a.length,
+          guideClearance: a.guideClearance,
+          guideThickness: a.guideThickness,
+          guideInset: a.guideInset,
+        },
+      ],
+      group: `${params.pcb.id}-guides`,
+      placementFn: (o) => ({ x: o.x, y: o.y, surface: o.surface }),
+    });
+  }
+}
+
 // ---------------------------------------------------------------------------
 // ObjectUpdater: orchestration only
 // ---------------------------------------------------------------------------
@@ -758,13 +784,11 @@ export class ObjectUpdater {
 
     if (params.waterProof) {
       this.updateSingle('seal', SealUpdater, params, params);
-
       this.updateSingle('seal-cutout', SealCutoutUpdater, params, params);
     }
 
     if (params.lidScrews) {
       this.updateSingle('base-screw-hole', BaseScrewHolesUpdater, params, params);
-
       this.updateSingle('lid-screw-hole', LidScrewHolesUpdater, params, params);
     }
 
@@ -785,9 +809,12 @@ export class ObjectUpdater {
   }
 
   updatePCB(pcb: PCB, params: Params): void {
-    if (!pcb.enabled) return;
-
-    this.updateObjects([pcb], PcbUpdater, params);
+    if (pcb.guides) {
+      this.updateSingle(`${params.pcb.id}-guide`, PcbGuideUpdater, pcb, params);
+    }
+    if (pcb.enabled) {
+      this.updateObjects([pcb], PcbUpdater, params);
+    }
   }
 
   updateMounts(mounts: PCBMount[], params: Params): void {
