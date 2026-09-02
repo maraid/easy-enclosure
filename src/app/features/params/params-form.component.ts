@@ -49,8 +49,6 @@ export class ParamsFormComponent {
     });
   }
 
-
-
   // definitionId(feature: FeatureTarget): string {
   //   if ('id' in feature) {
   //     return feature.id;
@@ -103,7 +101,9 @@ export class ParamsFormComponent {
     this.state.updateParam(key, checked as Params[K]);
   }
 
-  setPcbParam<K extends keyof PCB>(key: K, value: PCB[K]): void { this.updatePcb({ [key]: value } as Pick<PCB, K>); }
+  setPcbParam<K extends keyof PCB>(key: K, value: PCB[K]): void {
+    this.updatePcb({ [key]: value } as Pick<PCB, K>);
+  }
 
   updatePcb(patch: Partial<PCB>): void {
     const pcb = this.params().pcb;
@@ -163,14 +163,9 @@ export class ParamsFormComponent {
     const current = this.params();
 
     this.state.patchParams({
-      holes: current.holes.map((hole) =>
-        hole.id === id ? { ...hole, ...patch } : hole,
-      ),
+      holes: current.holes.map((hole) => (hole.id === id ? { ...hole, ...patch } : hole)),
     });
   }
-
-
-
 
   addPcbMount(): void {
     const current = this.params();
@@ -225,9 +220,6 @@ export class ParamsFormComponent {
       ),
     });
   }
-
-
-
 
   addCableClamp(): void {
     const current = this.params();
@@ -289,9 +281,6 @@ export class ParamsFormComponent {
     });
   }
 
-
-
-
   addInternalWall(): void {
     const current = this.params();
     const next: InternalWall = {
@@ -303,11 +292,10 @@ export class ParamsFormComponent {
       length: 25,
       thickness: 2,
       rotation: 0,
-      surface: "bottom"
+      surface: 'bottom',
     };
     this.state.patchParams({ internalWalls: [...current.internalWalls, next] });
   }
-
 
   removeInternalWall(id: string): void {
     const current = this.params();

@@ -10,11 +10,21 @@ const { subtract, union } = booleans;
 
 export type BaseGeometryParams = Pick<
   Params,
-  | 'length' | 'width' | 'height' | 'wall' | 'floor' | 'cornerRadius'
-  | 'insertThickness' | 'insertClearance' | 'waterProof' | 'lidScrews'
-  | 'sunkenLidScrewHeads' | 'baseLidScrewDiameter' | 'lidScrewDiameter' | 'lidScrewHeadDiameter'
-  | 'sealThickness' // consumed inside waterProofSealCutout — confirm against its real signature
-// | ...whatever baseScrewHoles actually reads, once uncommented
+  | 'length'
+  | 'width'
+  | 'height'
+  | 'wall'
+  | 'floor'
+  | 'cornerRadius'
+  | 'insertThickness'
+  | 'insertClearance'
+  | 'waterProof'
+  | 'lidScrews'
+  | 'sunkenLidScrewHeads'
+  | 'baseLidScrewDiameter'
+  | 'lidScrewDiameter'
+  | 'lidScrewHeadDiameter'
+  | 'sealThickness'
 >;
 
 const cloveredFrame = ({
@@ -43,22 +53,36 @@ const cloveredFrame = ({
     sunkenLidScrewHeads ? lidScrewHeadDiameter : 0,
   );
 
-  return translate([-width / 2, -length / 2, 0], subtract(
-    roundedCube(width, length, height, cornerRadius),
-    translate(
-      [_wall, _wall, floor],
-      clover(
-        width - _wall * 2,
-        length - _wall * 2,
-        height,
-        diameterMax / 2 + cornerRadius / 4 + wall / 2 + (sunkenLidScrewHeads ? wall : 0),
+  return translate(
+    [-width / 2, -length / 2, 0],
+    subtract(
+      roundedCube(width, length, height, cornerRadius),
+      translate(
+        [_wall, _wall, floor],
+        clover(
+          width - _wall * 2,
+          length - _wall * 2,
+          height,
+          diameterMax / 2 + cornerRadius / 4 + wall / 2 + (sunkenLidScrewHeads ? wall : 0),
+        ),
       ),
     ),
-  ));
+  );
 };
 
 export const base = (params: BaseGeometryParams) => {
-  const { length, width, height, wall, floor, cornerRadius, insertThickness, insertClearance, waterProof, lidScrews } = params;
+  const {
+    length,
+    width,
+    height,
+    wall,
+    floor,
+    cornerRadius,
+    insertThickness,
+    insertClearance,
+    waterProof,
+    lidScrews,
+  } = params;
 
   const body = [];
 
@@ -69,14 +93,7 @@ export const base = (params: BaseGeometryParams) => {
 
   if (lidScrews) {
     return cloveredFrame(params);
-    // const screwHoles = baseScrewHoles(params);
-    // if (screwHoles) subtracts.push(screwHoles);
   } else {
     return centeredHollowRoundCube(width, length, height, _wall, floor, cornerRadius);
   }
-
-  // const seal = waterProofSealCutout(params);
-  // if (seal) {
-  //   subtracts.push(seal);
-  // }
 };

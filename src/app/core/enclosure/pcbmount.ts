@@ -1,16 +1,12 @@
 import { Geom3 } from '@jscad/modeling/src/geometries/types';
-import { subtract, union } from '@jscad/modeling/src/operations/booleans';
-import { rotateX, rotateY, translate } from '@jscad/modeling/src/operations/transforms';
+import { subtract } from '@jscad/modeling/src/operations/booleans';
 import { cylinder } from '@jscad/modeling/src/primitives';
-import { degToRad } from '@jscad/modeling/src/utils';
-import { Surface } from '.';
-import { Params, PCBMount } from '../params';
-import { Feature } from './feature';
 
+import { PCBMount } from '../params';
 
 type PcbMountParams = Pick<PCBMount, 'height' | 'outerDiameter' | 'screwDiameter'>;
 
-export const pcbMount = ({ height, outerDiameter, screwDiameter }: PcbMountParams) => {
+export const pcbMount = ({ height, outerDiameter, screwDiameter }: PcbMountParams): Geom3 => {
   return subtract(
     cylinder({
       height: height,
@@ -25,4 +21,4 @@ export const pcbMount = ({ height, outerDiameter, screwDiameter }: PcbMountParam
       center: [0, 0, height / 2],
     }),
   );
-}
+};

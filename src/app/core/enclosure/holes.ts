@@ -6,23 +6,9 @@ import { Hole } from '../params';
 
 const TOP_HOLE_DEPTH_TOLERANCE = 0.2;
 
-
 export const hole = (
-  {
-    floor,
-    roof,
-    wall,
-    insertHeight,
-    insertThickness,
-    insertClearance
-  }: Params,
-  {
-    shape,
-    diameter,
-    width: holeWidth,
-    length: holeLength,
-    surface,
-  }: Hole,
+  { floor, roof, wall, insertHeight, insertThickness, insertClearance }: Params,
+  { shape, diameter, width: holeWidth, length: holeLength, surface }: Hole,
 ) => {
   const wallThickness = insertThickness + insertClearance * 2 + wall * 2;
   const lidThickness = roof + insertHeight + TOP_HOLE_DEPTH_TOLERANCE;
@@ -54,19 +40,19 @@ export const hole = (
       geometry = cylinder({
         radius: radius,
         height: holeDepth,
-        center: [0, 0, - holeDepth / 2],
+        center: [0, 0, -holeDepth / 2],
       });
       break;
     case 'rectangle':
       geometry = cuboid({
         size: [holeWidth, holeLength, holeDepth],
-        center: [0, 0, - holeDepth / 2],
+        center: [0, 0, -holeDepth / 2],
       });
       break;
     case 'square':
       geometry = cuboid({
         size: [holeWidth, holeWidth, holeDepth],
-        center: [0, 0, - holeDepth / 2],
+        center: [0, 0, -holeDepth / 2],
       });
       break;
     default:
@@ -74,4 +60,3 @@ export const hole = (
   }
   return geometry;
 };
-

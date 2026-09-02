@@ -4,9 +4,7 @@ import { mirrorX, rotateY, translate } from '@jscad/modeling/src/operations/tran
 import { cube, cuboid, cylinder } from '@jscad/modeling/src/primitives';
 import { Geom3 } from '@jscad/modeling/src/geometries/types';
 
-
 import { Params } from '../params';
-import { Feature } from './feature';
 
 const SCREWCLEARANCE = 2;
 const RIDGEWIDTH = 2;
@@ -42,15 +40,24 @@ export const flange = (screwDiameter: number) => {
     ),
   );
 
-  return translate([0, 0, outerWidth / 2], subtract(
-    outer,
-    translate([RIDGEWIDTH, 0, FLOOR], inner),
-    translate([-outerWidth, 0, outerWidth], rotateY(45, cube({ size: outerWidth * 2 }))),
-    translate([-outerWidth / 2, 0, 0], cylinder({ height: outerWidth, radius: screwDiameter / 2 })),
-  ));
+  return translate(
+    [0, 0, outerWidth / 2],
+    subtract(
+      outer,
+      translate([RIDGEWIDTH, 0, FLOOR], inner),
+      translate([-outerWidth, 0, outerWidth], rotateY(45, cube({ size: outerWidth * 2 }))),
+      translate(
+        [-outerWidth / 2, 0, 0],
+        cylinder({ height: outerWidth, radius: screwDiameter / 2 }),
+      ),
+    ),
+  );
 };
 
-export type FlangesGeometryParams = Pick<Params, 'length' | 'width' | 'cornerRadius' | 'wallMountScrewDiameter' | 'wallMountCount'>;
+export type FlangesGeometryParams = Pick<
+  Params,
+  'length' | 'width' | 'cornerRadius' | 'wallMountScrewDiameter' | 'wallMountCount'
+>;
 
 export const flanges = ({
   length,
@@ -76,4 +83,3 @@ export const flanges = ({
 
   return pieces.length === 1 ? pieces[0] : union(pieces);
 };
-

@@ -27,7 +27,6 @@ import { ObjectUpdater, Operation, Origin, Placer } from './renderer.update';
 import { FeatureTarget } from '../../core/state/enclosure-state.service';
 import { Surface } from '../../core/enclosure';
 
-
 const gridDeps = [
   'showGrid',
   'gridSpacing',
@@ -181,8 +180,6 @@ const vector3Multiply = (a: Vec3Tuple, b: Vec3Tuple): Vec3Tuple => [
   a[2] * b[2],
 ];
 
-
-
 type SurfaceLabel = {
   name: 'Front' | 'Back' | 'Left' | 'Right' | 'Lid' | 'Bottom' | 'Seal';
   x: number;
@@ -207,11 +204,10 @@ type DragState = {
   feature: FeatureTarget;
   startScreen: [number, number];
   startValue: { x: number; y: number; z: number };
-  axis: DragAxis | null;         // null until locked
+  axis: DragAxis | null; // null until locked
   axisScreenDir: [number, number] | null; // screen-space unit vector for the locked axis
   unitsPerPixel: number;
 };
-
 
 @Component({
   selector: 'app-renderer',
@@ -227,7 +223,6 @@ type DragState = {
   templateUrl: './renderer.component.html',
 })
 export class RendererComponent implements AfterViewInit, OnDestroy {
-
   @ViewChild('container', { static: true })
   containerRef?: ElementRef<HTMLDivElement>;
 
@@ -259,7 +254,14 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
 
   private renderOptions: RenderOptions | null = null;
   private baseRenderEntities: Entity[] = [];
-  private featureCandidates: { id: string; group?: string; geometry: Geom3; triangles: [Vec3Tuple, Vec3Tuple, Vec3Tuple][], type: FeatureTarget['type'], operation: Operation }[] = [];
+  private featureCandidates: {
+    id: string;
+    group?: string;
+    geometry: Geom3;
+    triangles: [Vec3Tuple, Vec3Tuple, Vec3Tuple][];
+    type: FeatureTarget['type'];
+    operation: Operation;
+  }[] = [];
   private hoveredFeature: FeatureTarget | null = null;
   private renderer: ((options?: RenderOptions) => void) | null = null;
   private objects: ObjectUpdater = new ObjectUpdater();
@@ -278,7 +280,6 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
   private lastCommittedValue: number | null = null;
 
   private placer = new Placer();
-
 
   constructor() {
     effect(() => {
@@ -365,30 +366,34 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
     switch (feature.type) {
       case 'hole':
         if (axis === 'z') return; // Hole has no z
-        this.state.updateParam('holes', params.holes.map((h) =>
-          h.id === feature.id ? { ...h, [axis]: value } : h,
-        ));
+        this.state.updateParam(
+          'holes',
+          params.holes.map((h) => (h.id === feature.id ? { ...h, [axis]: value } : h)),
+        );
         return;
 
       case 'pcbMount':
         if (axis === 'z') return; // PCBMount has no z
-        this.state.updateParam('pcbMounts', params.pcbMounts.map((m) =>
-          m.id === feature.id ? { ...m, [axis]: value } : m,
-        ));
+        this.state.updateParam(
+          'pcbMounts',
+          params.pcbMounts.map((m) => (m.id === feature.id ? { ...m, [axis]: value } : m)),
+        );
         return;
 
       case 'internalWall':
         if (axis === 'z') return;
-        this.state.updateParam('internalWalls', params.internalWalls.map((w) =>
-          w.id === feature.id ? { ...w, [axis]: value } : w,
-        ));
+        this.state.updateParam(
+          'internalWalls',
+          params.internalWalls.map((w) => (w.id === feature.id ? { ...w, [axis]: value } : w)),
+        );
         return;
 
       case 'cableClamp':
         if (axis === 'z') return;
-        this.state.updateParam('cableClamps', params.cableClamps.map((c) =>
-          c.id === feature.id ? { ...c, [axis]: value } : c,
-        ));
+        this.state.updateParam(
+          'cableClamps',
+          params.cableClamps.map((c) => (c.id === feature.id ? { ...c, [axis]: value } : c)),
+        );
         return;
 
       case 'pcb':
@@ -462,7 +467,6 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
     return ['x', 'y'];
   }
 
-
   private updateDrag(event: PointerEvent): void {
     if (!this.drag) return;
     const container = this.containerRef?.nativeElement;
@@ -513,7 +517,10 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
       let bestScore = -Infinity;
       for (const c of candidates) {
         const score = Math.abs(c.dir[0] * dragDir[0] + c.dir[1] * dragDir[1]);
-        if (score > bestScore) { bestScore = score; best = c; }
+        if (score > bestScore) {
+          bestScore = score;
+          best = c;
+        }
       }
 
       this.drag.axis = best.axis;
@@ -577,7 +584,7 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
       return;
     }
     this.pointerDown = false;
-    this.containerRef?.nativeElement.releasePointerCapture(event.pointerId)
+    this.containerRef?.nativeElement.releasePointerCapture(event.pointerId);
   }
 
   private isDraggable(feature: FeatureTarget): boolean {
@@ -680,7 +687,9 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
   private scheduleModelRender(params: Params): void {
     if (!this.isViewReady) return;
 
-    const paramsDiff = this.prevParams ? this.diffParams(this.prevParams, params) : Object.keys(params);
+    const paramsDiff = this.prevParams
+      ? this.diffParams(this.prevParams, params)
+      : Object.keys(params);
     if (paramsDiff.length === 0) return;
 
     this.pendingParams = params;
@@ -734,7 +743,9 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
   private clampCameraPolarAngle(): void {
     const [cx, cy, cz] = this.camera.position as Vec3Tuple;
     const [tx, ty, tz] = this.camera.target as Vec3Tuple;
-    const dx = cx - tx, dy = cy - ty, dz = cz - tz;
+    const dx = cx - tx,
+      dy = cy - ty,
+      dz = cz - tz;
     const radius = Math.hypot(dx, dy, dz);
     if (radius < 1e-6) return;
 
@@ -946,16 +957,26 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
     this.refreshRenderEntities();
   }
 
-
   private featureAtScreenPosition(event: PointerEvent): FeatureTarget | null {
     const container = this.containerRef?.nativeElement;
     if (!container) return null;
     const rect = container.getBoundingClientRect();
-    const ray = this.screenPointToRay(event.clientX - rect.left, event.clientY - rect.top, container);
+    const ray = this.screenPointToRay(
+      event.clientX - rect.left,
+      event.clientY - rect.top,
+      container,
+    );
 
     const EPSILON = 1e-4; // world units — hits within this range of each other are "the same point"
 
-    let closest: { id: string; group?: string; type: FeatureTarget['type']; index?: number; operation: Operation; distance: number } | null = null;
+    let closest: {
+      id: string;
+      group?: string;
+      type: FeatureTarget['type'];
+      index?: number;
+      operation: Operation;
+      distance: number;
+    } | null = null;
 
     for (const candidate of this.featureCandidates) {
       for (const triangle of candidate.triangles) {
@@ -963,7 +984,13 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
         if (distance === null) continue;
 
         if (!closest) {
-          closest = { id: candidate.id, group: candidate.group, type: candidate.type, operation: candidate.operation, distance };
+          closest = {
+            id: candidate.id,
+            group: candidate.group,
+            type: candidate.type,
+            operation: candidate.operation,
+            distance,
+          };
           continue;
         }
 
@@ -971,11 +998,23 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
 
         if (delta < -EPSILON) {
           // clearly closer — always wins
-          closest = { id: candidate.id, group: candidate.group, type: candidate.type, operation: candidate.operation, distance };
+          closest = {
+            id: candidate.id,
+            group: candidate.group,
+            type: candidate.type,
+            operation: candidate.operation,
+            distance,
+          };
         } else if (Math.abs(delta) <= EPSILON) {
           // tie — prefer the subtract piece (hole) over the shell it's cut into
           if (candidate.operation === 'subtract' && closest.operation !== 'subtract') {
-            closest = { id: candidate.id, group: candidate.group, type: candidate.type, operation: candidate.operation, distance };
+            closest = {
+              id: candidate.id,
+              group: candidate.group,
+              type: candidate.type,
+              operation: candidate.operation,
+              distance,
+            };
           }
         }
         // delta > EPSILON: existing closest is genuinely nearer, keep it
@@ -984,7 +1023,6 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
 
     return closest ? { id: closest.id, group: closest.group, type: closest.type } : null;
   }
-
 
   private createFeatureCandidate(feature: FeatureTarget, geometry: Geom3): FeatureCandidate {
     const triangles: [Vec3Tuple, Vec3Tuple, Vec3Tuple][] = [];
@@ -1020,39 +1058,25 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
     const cameraTarget = this.camera.target as Vec3Tuple;
     const cameraUp = (this.camera.up as Vec3Tuple | undefined) ?? [0, 0, 1];
 
-    const zAxis = this.normalize(
-      this.subtract(cameraPosition, cameraTarget),
-    );
+    const zAxis = this.normalize(this.subtract(cameraPosition, cameraTarget));
 
-    const xAxis = this.normalize(
-      this.cross(cameraUp, zAxis),
-    );
+    const xAxis = this.normalize(this.cross(cameraUp, zAxis));
 
     const yAxis = this.cross(zAxis, xAxis);
 
-    const fov =
-      this.camera.fov > Math.PI
-        ? (this.camera.fov * Math.PI) / 180
-        : this.camera.fov;
+    const fov = this.camera.fov > Math.PI ? (this.camera.fov * Math.PI) / 180 : this.camera.fov;
 
-    const aspect =
-      container.clientWidth / Math.max(container.clientHeight, 1);
+    const aspect = container.clientWidth / Math.max(container.clientHeight, 1);
 
     const halfHeight = Math.tan(fov / 2);
     const halfWidth = halfHeight * aspect;
 
     const direction = this.normalize([
-      xAxis[0] * ndcX * halfWidth +
-      yAxis[0] * ndcY * halfHeight -
-      zAxis[0],
+      xAxis[0] * ndcX * halfWidth + yAxis[0] * ndcY * halfHeight - zAxis[0],
 
-      xAxis[1] * ndcX * halfWidth +
-      yAxis[1] * ndcY * halfHeight -
-      zAxis[1],
+      xAxis[1] * ndcX * halfWidth + yAxis[1] * ndcY * halfHeight - zAxis[1],
 
-      xAxis[2] * ndcX * halfWidth +
-      yAxis[2] * ndcY * halfHeight -
-      zAxis[2],
+      xAxis[2] * ndcX * halfWidth + yAxis[2] * ndcY * halfHeight - zAxis[2],
     ]);
 
     return {
@@ -1145,7 +1169,8 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
     const hovered = this.hoveredFeature;
     const matches = hovered
       ? this.featureCandidates.filter((c) =>
-        hovered.group ? c.group === hovered.group : c.id === hovered.id)
+          hovered.group ? c.group === hovered.group : c.id === hovered.id,
+        )
       : [];
 
     const highlightEntities = matches.flatMap((c) =>
@@ -1234,11 +1259,10 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
   }
 
   private async renderModel(params: Params, diff: string[]): Promise<void> {
-
     this.objects.updateAll(params);
 
     const newModels: Geom3[] = [];
-    newModels.push(...this.objects.getModels())
+    newModels.push(...this.objects.getModels());
 
     if (newModels.length === 0) {
       return;
@@ -1248,10 +1272,16 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
 
     const bounds = newModels
       .map((m) => measureBoundingBox(m) as [Vec3Tuple, Vec3Tuple])
-      .reduce((acc, [min, max]) => [
-        [Math.min(acc[0][0], min[0]), Math.min(acc[0][1], min[1]), Math.min(acc[0][2], min[2])],
-        [Math.max(acc[1][0], max[0]), Math.max(acc[1][1], max[1]), Math.max(acc[1][2], max[2])],
-      ], [[Infinity, Infinity, Infinity], [-Infinity, -Infinity, -Infinity]]);
+      .reduce(
+        (acc, [min, max]) => [
+          [Math.min(acc[0][0], min[0]), Math.min(acc[0][1], min[1]), Math.min(acc[0][2], min[2])],
+          [Math.max(acc[1][0], max[0]), Math.max(acc[1][1], max[1]), Math.max(acc[1][2], max[2])],
+        ],
+        [
+          [Infinity, Infinity, Infinity],
+          [-Infinity, -Infinity, -Infinity],
+        ],
+      );
     const gridEntity = this.buildGridEntity(params, bounds);
     // The grid is a reference plane sitting under the model, so list it first
     // so it draws before the solid geometry.
@@ -1259,7 +1289,14 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
 
     this.featureCandidates = this.objects.getFeatureEntries().map((entry) => {
       const c = this.createFeatureCandidate(entry, entry.geometry);
-      return { id: entry.id, group: entry.group, type: entry.type, geometry: entry.geometry, triangles: c.triangles, operation: entry.operation };
+      return {
+        id: entry.id,
+        group: entry.group,
+        type: entry.type,
+        geometry: entry.geometry,
+        triangles: c.triangles,
+        operation: entry.operation,
+      };
     });
 
     // Re-frame the camera when the grid becomes visible (so it lands in view)

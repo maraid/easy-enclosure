@@ -8,9 +8,18 @@ const { translate } = transforms;
 
 export type LidInsertParams = Pick<
   Params,
-  | 'width' | 'length' | 'wall' | 'lidScrews' | 'cornerRadius'
-  | 'insertThickness' | 'insertHeight' | 'insertClearance'
-  | 'baseLidScrewDiameter' | 'lidScrewDiameter' | 'sunkenLidScrewHeads' | 'lidScrewHeadDiameter'
+  | 'width'
+  | 'length'
+  | 'wall'
+  | 'lidScrews'
+  | 'cornerRadius'
+  | 'insertThickness'
+  | 'insertHeight'
+  | 'insertClearance'
+  | 'baseLidScrewDiameter'
+  | 'lidScrewDiameter'
+  | 'sunkenLidScrewHeads'
+  | 'lidScrewHeadDiameter'
 >;
 
 export const lidInsert = ({
@@ -39,28 +48,34 @@ export const lidInsert = ({
       lidScrewDiameter,
       sunkenLidScrewHeads ? lidScrewHeadDiameter : 0,
     );
-    return translate([-width / 2, -length / 2, 0], translate(
+    return translate(
+      [-width / 2, -length / 2, 0],
+      translate(
+        insertOrigin,
+        cloverFrame(
+          width - wall * 2 - insertClearance * 2,
+          length - wall * 2 - insertClearance * 2,
+          insertHeight,
+          insertThickness,
+          diameterMax / 2 + cornerRadius / 4 + wall / 2 + (sunkenLidScrewHeads ? wall : 0),
+        ),
+      ),
+    );
+  }
+
+  return translate(
+    [-width / 2, -length / 2, 0],
+    translate(
       insertOrigin,
-      cloverFrame(
+      roundedFrame(
         width - wall * 2 - insertClearance * 2,
         length - wall * 2 - insertClearance * 2,
         insertHeight,
         insertThickness,
-        diameterMax / 2 + cornerRadius / 4 + wall / 2 + (sunkenLidScrewHeads ? wall : 0),
+        cornerRadius,
       ),
-    ));
-  }
-
-  return translate([-width / 2, -length / 2, 0], translate(
-    insertOrigin,
-    roundedFrame(
-      width - wall * 2 - insertClearance * 2,
-      length - wall * 2 - insertClearance * 2,
-      insertHeight,
-      insertThickness,
-      cornerRadius,
     ),
-  ));
+  );
 };
 
 export type LidParams = {
@@ -68,45 +83,8 @@ export type LidParams = {
   length: number;
   roof: number;
   cornerRadius: number;
-}
+};
 
-
-export const lid = ({
-  width,
-  length,
-  roof,
-  cornerRadius,
-}: LidParams) => {
+export const lid = ({ width, length, roof, cornerRadius }: LidParams) => {
   return centeredRoundedCube(width, length, roof, cornerRadius);
-  // const lidHoles = holes({
-  //   length,
-  //   width,
-  //   height,
-  //   roof,
-  //   wall,
-  //   insertHeight,
-  //   insertThickness,
-  //   insertClearance,
-  //   holes: holeParams
-  // }, ['top']);
-  // if (lidHoles) {
-  //   subtracts.push(lidHoles);
-  // }
-  // const screwHoles = lidScrewHoles({
-  //   width,
-  //   length,
-  //   roof,
-  //   wall,
-  //   cornerRadius,
-  //   lidScrews,
-  //   lidScrewDiameter,
-  //   sunkenLidScrewHeads,
-  //   lidScrewHeadDiameter,
-  //   lidScrewHeadDepth,
-  // });
-  // if (screwHoles) {
-  //   subtracts.push(screwHoles);
-  // }
-  // return subtract(union(entities), union(subtracts));
-
-}
+};
