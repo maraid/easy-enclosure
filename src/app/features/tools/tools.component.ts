@@ -11,12 +11,17 @@ import { union } from '@jscad/modeling/src/operations/booleans';
 import { serialize } from '@jscad/stl-serializer';
 import { saveAs } from 'file-saver';
 
-import { base } from '../../core/enclosure/base';
-import { lid } from '../../core/enclosure/lid';
-import { waterProofSeal } from '../../core/enclosure/waterproofseal';
 import type { Params } from '../../core/params';
 import { EnclosureStateService } from '../../core/state/enclosure-state.service';
 import { ActionButtonComponent } from '../../shared/action-button/action-button.component';
+import { ObjectUpdater, Origin } from '../renderer/renderer.update'; // adjust path to wherever ObjectUpdater lives
+
+const ORIGIN_LABELS: Record<Origin, string> = {
+  base: 'base',
+  lid: 'lid',
+  seal: 'waterproof-seal',
+  clampTops: 'cable-clamp-tops',
+};
 
 @Component({
   selector: 'app-tools',
@@ -42,17 +47,13 @@ export class ToolsComponent {
   openExportModal(): void {
     this.isExportModalOpen.set(true);
     const dialog = this.exportDialog?.nativeElement;
-    if (dialog && !dialog.open) {
-      dialog.showModal();
-    }
+    if (dialog && !dialog.open) dialog.showModal();
   }
 
   closeExportModal(): void {
     this.isExportModalOpen.set(false);
     const dialog = this.exportDialog?.nativeElement;
-    if (dialog?.open) {
-      dialog.close();
-    }
+    if (dialog?.open) dialog.close();
   }
 
   saveParamsFile(): void {
@@ -64,75 +65,53 @@ export class ToolsComponent {
 
   loadParamsFile(event: Event): void {
     const input = event.target as HTMLInputElement;
-    if (!input.files || input.files.length === 0) {
-      return;
-    }
+    if (!input.files || input.files.length === 0) return;
 
     const fileReader = new FileReader();
     fileReader.onload = () => {
       const data = JSON.parse(fileReader.result as string) as Partial<Params>;
-      const merged = {
-        ...this.state.params(),
-        ...data,
-      };
+      const merged = { ...this.state.params(), ...data };
       this.state.setParams(merged as Params);
     };
     fileReader.readAsText(input.files[0], 'UTF-8');
-
     input.value = '';
+  }
+
+  exportMountsStl(): void {
+    const tsStr = this.formattedTimestamp();
+    const currentParams = this.state.params();
+
+    const objects = new ObjectUpdater();
+    objects.updateAll(currentParams);
+
+    const mounts = objects.getModelsByType('pcbMount');
+    if (mounts.length === 0) {
+      this.closeExportModal();
+      return;
+    }
+
+    const geometry = mounts.length === 1 ? mounts[0] : union(mounts);
+    this.exportGeometry(`enclosure-pcb-mounts-${tsStr}`, geometry);
+
+    this.closeExportModal();
   }
 
   exportStl(): void {
     const tsStr = this.formattedTimestamp();
     const currentParams = this.state.params();
-    // const lidMounts = pcbMountsOnLid(currentParams);
 
-    // const lidGeometry = lidMounts ? union([lid(currentParams), lidMounts]) : lid(currentParams);
+    // Rebuild via the same pipeline the renderer uses, so export
+    // exactly matches what's on screen — same geometry, same cuts.
+    const objects = new ObjectUpdater();
+    objects.updateAll(currentParams);
 
-    // this.exportGeometry(`enclosure-lid-${tsStr}`, lidGeometry);
+    const grouped = objects.getModelsByOrigin();
 
-    const baseParts: Geom3[] = [base(currentParams)];
-    // const baseMounts = pcbMountsOnBase(currentParams);
-
-    // if (baseMounts) {
-    //   baseParts.push(baseMounts);
-    // }
-
-    // const _internalWalls = internalWalls(currentParams)
-    // if (_internalWalls) {
-    //   // baseParts.push(_internalWalls); TODO 
-    // }
-
-    // const _cableClamps = cableClamps(currentParams)
-    // if (_cableClamps) {
-    //   baseParts.push(_cableClamps);
-    // }
-
-    this.exportGeometry(
-      `enclosure-base-${tsStr}`,
-      baseParts.length > 1 ? union(baseParts) : baseParts[0],
-    );
-
-    if (currentParams.waterProof) {
-      this.exportGeometry(`enclosure-waterproof-seal-${tsStr}`, waterProofSeal(currentParams));
+    for (const [origin, pieces] of grouped) {
+      if (pieces.length === 0) continue;
+      const geometry = pieces.length === 1 ? pieces[0] : union(pieces);
+      this.exportGeometry(`enclosure-${ORIGIN_LABELS[origin]}-${tsStr}`, geometry);
     }
-
-    this.closeExportModal();
-  }
-
-  exportPcbMountsStl(): void {
-    const tsStr = this.formattedTimestamp();
-    const currentParams = this.state.params();
-
-    // const baseMounts = pcbMountsOnBase(currentParams);
-    // if (baseMounts) {
-    //   this.exportGeometry(`enclosure-pcb-mounts-base-${tsStr}`, baseMounts);
-    // }
-
-    // const lidMounts = pcbMountsOnLid(currentParams);
-    // if (lidMounts) {
-    //   this.exportGeometry(`enclosure-pcb-mounts-lid-${tsStr}`, lidMounts);
-    // }
 
     this.closeExportModal();
   }
@@ -149,12 +128,6 @@ export class ToolsComponent {
 
   private formattedTimestamp(): string {
     const ts = new Date();
-    const y = ts.getFullYear();
-    const m = ts.getMonth() + 1;
-    const d = ts.getDate();
-    const h = ts.getHours();
-    const mm = ts.getMinutes();
-    const s = ts.getSeconds();
-    return `${y}${m}${d}${h}${mm}${s}`;
+    return `${ts.getFullYear()}${ts.getMonth() + 1}${ts.getDate()}${ts.getHours()}${ts.getMinutes()}${ts.getSeconds()}`;
   }
 }

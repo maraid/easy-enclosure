@@ -202,7 +202,7 @@ abstract class BaseComponentUpdater<T = any> {
     protected m_placementKey = '';
 
     public type: FeatureTarget['type'] = 'base';
-
+    public readonly exportable: boolean;
     public readonly origin: Origin;
     public readonly operation: Operation;
     public readonly group?: string;
@@ -222,9 +222,11 @@ abstract class BaseComponentUpdater<T = any> {
             placementFn?: (obj: T) => PlacementFields;
             group?: string;
             attachesToShell?: boolean; // true only for pieces that must be unioned into the base/lid solid
+            exportable?: boolean;
         } = {},
     ) {
         this.type = type;
+        this.exportable = options.exportable ?? true;
         this.toArgs = options.toArgs ?? ((o) => [o]);
         this.origin = options.origin ?? 'base';
         this.operation = options.operation ?? 'union';
@@ -357,6 +359,7 @@ class PcbUpdater extends BaseComponentUpdater<PCB> {
     constructor(item: PCB, params: Params) {
         super(item, params, pcb, 'pcb', {
             toArgs: (o) => [{ width: o.width, length: o.length, screwOffset: o.screwOffset }],
+            exportable: false,
         });
     }
 }
@@ -583,19 +586,58 @@ class CableClampTopUpdater extends BaseComponentUpdater<CableClampTopArg> {
 // ObjectUpdater: orchestration only
 // ---------------------------------------------------------------------------
 
+interface ModelEntry {
+    model: Geom3;
+    origin: Origin;
+    type: FeatureTarget['type'];
+    updater: BaseComponentUpdater;
+}
+
 export class ObjectUpdater {
+    private models: ModelEntry[] = [];
     private objects = new Map<string, BaseComponentUpdater>();
-    private models: Geom3[] = [];
     private featureEntries: FeatureEntry[] = [];
     private placer = new Placer();
 
-    // per-updateAll scratch state — reset at the top of each call
-    private shellPieces = new Map<Origin, { updater: BaseComponentUpdater; geom: Geom3 }[]>();
-    private shellCuts = new Map<Origin, { updater: BaseComponentUpdater; geom: Geom3 }[]>();
-    private shellCache = new Map<Origin, { key: string; geometry: Geom3 }>();
+    // Per-updateAll scratch state — reset at the top of each call
+    private shellPieces = new Map<
+        Origin,
+        { updater: BaseComponentUpdater; geom: Geom3 }[]
+    >();
+
+    private shellCuts = new Map<
+        Origin,
+        { updater: BaseComponentUpdater; geom: Geom3 }[]
+    >();
+
+    private shellCache = new Map<
+        Origin,
+        { key: string; geometry: Geom3 }
+    >();
 
     getModels(): Geom3[] {
-        return this.models;
+        return this.models.map(entry => entry.model);
+    }
+
+    getModelsByOrigin(): Map<Origin, Geom3[]> {
+        const grouped = new Map<Origin, Geom3[]>();
+
+        for (const entry of this.models) {
+            if (!entry.updater.exportable)
+                continue;
+
+            const list = grouped.get(entry.origin) ?? [];
+            list.push(entry.model);
+            grouped.set(entry.origin, list);
+        }
+
+        return grouped;
+    }
+
+    getModelsByType(type: FeatureTarget['type']): Geom3[] {
+        return this.models
+            .filter(entry => entry.type === type)
+            .map(entry => entry.model);
     }
 
     getFeatureEntries(): FeatureEntry[] {
@@ -608,29 +650,91 @@ export class ObjectUpdater {
         this.shellPieces = new Map();
         this.shellCuts = new Map();
 
-        if (params.wallMounts) this.updateSingle('wallMount', WallMountUpdater, params, params);
-        this.updatePCB(params.pcb, params);
-        this.updateSingle('base', BaseUpdater, params, params);
-        if (params.waterProof) {
-            this.updateSingle('seal', SealUpdater, params, params);
-            this.updateSingle('seal-cutout', SealCutoutUpdater, params, params);
+        if (params.wallMounts) {
+            this.updateSingle(
+                'wallMount',
+                WallMountUpdater,
+                params,
+                params,
+            );
         }
-        if (params.lidScrews) this.updateSingle('base-screw-hole', BaseScrewHolesUpdater, params, params);
-        if (params.lidScrews) this.updateSingle('lid-screw-hole', LidScrewHolesUpdater, params, params);
-        if (params.lidScrews && isSunken(params)) this.updateSingle('lid-screw-boss', LidScrewBossUpdater, params, params);
-        this.updateSingle('lid', LidUpdater, params, params);
-        this.updateSingle('lid-insert', LidInsertUpdater, params, params);
+
+        this.updatePCB(params.pcb, params);
+
+        this.updateSingle(
+            'base',
+            BaseUpdater,
+            params,
+            params,
+        );
+
+        if (params.waterProof) {
+            this.updateSingle(
+                'seal',
+                SealUpdater,
+                params,
+                params,
+            );
+
+            this.updateSingle(
+                'seal-cutout',
+                SealCutoutUpdater,
+                params,
+                params,
+            );
+        }
+
+        if (params.lidScrews) {
+            this.updateSingle(
+                'base-screw-hole',
+                BaseScrewHolesUpdater,
+                params,
+                params,
+            );
+
+            this.updateSingle(
+                'lid-screw-hole',
+                LidScrewHolesUpdater,
+                params,
+                params,
+            );
+        }
+
+        if (params.lidScrews && isSunken(params)) {
+            this.updateSingle(
+                'lid-screw-boss',
+                LidScrewBossUpdater,
+                params,
+                params,
+            );
+        }
+
+        this.updateSingle(
+            'lid',
+            LidUpdater,
+            params,
+            params,
+        );
+
+        this.updateSingle(
+            'lid-insert',
+            LidInsertUpdater,
+            params,
+            params,
+        );
+
         this.updateMounts(params.pcbMounts, params);
         this.updateInternalWalls(params.internalWalls, params);
         this.updateHoles(params.holes, params);
         this.updateCableClamps(params.cableClamps, params);
 
         this.combineShells();
-
     }
 
     updatePCB(pcb: PCB, params: Params): void {
-        if (!pcb.enabled) return;
+        if (!pcb.enabled)
+            return;
+
         this.updateObjects([pcb], PcbUpdater, params);
     }
 
@@ -648,40 +752,99 @@ export class ObjectUpdater {
 
     updateCableClamps(clamps: CableClamp[], params: Params): void {
         const total = clamps.length;
+
         clamps.forEach((clamp, index) => {
-            this.updateSingle(clamp.id, CableClampUpdater, clamp, params);
-            this.updateSingle(`${clamp.id}-top`, CableClampTopUpdater, { clamp, index, total }, params);
+            this.updateSingle(
+                clamp.id,
+                CableClampUpdater,
+                clamp,
+                params,
+            );
+
+            this.updateSingle(
+                `${clamp.id}-top`,
+                CableClampTopUpdater,
+                { clamp, index, total },
+                params,
+            );
         });
     }
 
-    // --- shared primitives -------------------------------------------------
+    // ---------------------------------------------------------------------
+    // Shared primitives
+    // ---------------------------------------------------------------------
 
+    private collect(
+        updater: BaseComponentUpdater,
+        obj: any,
+        params: Params,
+        id: string,
+    ): void {
+        const placed = updater.getPlaced(
+            obj,
+            params,
+            this.placer,
+        );
 
-    private collect(updater: BaseComponentUpdater, obj: any, params: Params, id: string): void {
-        const placed = updater.getPlaced(obj, params, this.placer);
-        if (!placed) return;
+        if (!placed)
+            return;
 
-        this.featureEntries.push({ id, group: updater.group, type: updater.type, operation: updater.operation, geometry: placed });
+        this.featureEntries.push({
+            id,
+            group: updater.group,
+            type: updater.type,
+            operation: updater.operation,
+            geometry: placed,
+        });
 
         if (!updater.attachesToShell) {
-            this.models.push(placed);
+            this.models.push({
+                model: placed,
+                origin: updater.origin,
+                type: updater.type,
+                updater,
+            });
+
             return;
         }
 
-        const bucket = updater.operation === 'subtract' ? this.shellCuts : this.shellPieces;
+        const bucket =
+            updater.operation === 'subtract'
+                ? this.shellCuts
+                : this.shellPieces;
+
         const list = bucket.get(updater.origin) ?? [];
-        list.push({ updater, geom: placed });
+
+        list.push({
+            updater,
+            geom: placed,
+        });
+
         bucket.set(updater.origin, list);
     }
 
-    private updateObjects<T extends { id: string }, U extends BaseComponentUpdater>(
+    private updateObjects<
+        T extends { id: string },
+        U extends BaseComponentUpdater,
+    >(
         objects: T[],
         Updater: new (obj: T, params: Params) => U,
         params: Params,
     ): void {
         for (const obj of objects) {
-            const updater = this.getUpdated(obj.id, Updater, obj, params);
-            this.collect(updater, obj, params, obj.id);
+            const updater = this.getUpdated(
+                obj.id,
+                Updater,
+                obj,
+                params,
+            );
+
+            this.collect(
+                updater,
+                obj,
+                params,
+                obj.id,
+            );
         }
     }
 
@@ -691,39 +854,83 @@ export class ObjectUpdater {
         updateArg: any,
         params: Params,
     ): void {
-        const updater = this.getUpdated(id, Updater, updateArg, params);
-        this.collect(updater, updateArg, params, id);
+        const updater = this.getUpdated(
+            id,
+            Updater,
+            updateArg,
+            params,
+        );
+
+        this.collect(
+            updater,
+            updateArg,
+            params,
+            id,
+        );
     }
 
     private combineShells(): void {
-        const allOrigins = new Set<Origin>([...this.shellPieces.keys(), ...this.shellCuts.keys()]);
+        const allOrigins = new Set<Origin>([
+            ...this.shellPieces.keys(),
+            ...this.shellCuts.keys(),
+        ]);
 
         for (const origin of allOrigins) {
             const targets = this.shellPieces.get(origin) ?? [];
             const cuts = this.shellCuts.get(origin) ?? [];
 
-            if (targets.length === 0) continue; // nothing to subtract from/push
+            if (targets.length === 0)
+                continue;
 
-            const combinedKey = [...targets, ...cuts]
-                .map((entry) => entry.updater.placementCacheKey())
+            const combinedKey = [
+                ...targets,
+                ...cuts,
+            ]
+                .map(entry => entry.updater.placementCacheKey())
                 .join('||');
 
             const cached = this.shellCache.get(origin);
+
             if (cached && cached.key === combinedKey) {
-                this.models.push(cached.geometry);
-                continue; // skip subtract entirely — nothing feeding this shell changed
+                // We still need a ModelEntry so that the rest of the
+                // pipeline has the same metadata as a normal model.
+                //
+                // There may be multiple target pieces, so the cache
+                // represents the combined result for this origin.
+                const updater = targets[0].updater;
+
+                this.models.push({
+                    model: cached.geometry,
+                    origin,
+                    type: updater.type,
+                    updater,
+                });
+
+                continue;
             }
 
+            const relevantCuts = cuts.map(c => c.geom);
+
             for (const target of targets) {
-                const relevantCuts = cuts.map((c) => c.geom);
                 const geom = relevantCuts.length
                     ? subtract(target.geom, ...relevantCuts)
                     : target.geom;
-                this.shellCache.set(origin, { key: combinedKey, geometry: geom });
-                this.models.push(geom);
+
+                this.shellCache.set(origin, {
+                    key: combinedKey,
+                    geometry: geom,
+                });
+
+                this.models.push({
+                    model: geom,
+                    origin,
+                    type: target.updater.type,
+                    updater: target.updater,
+                });
             }
         }
     }
+
     private getUpdated<U extends BaseComponentUpdater>(
         id: string,
         Updater: new (obj: any, params: Params) => U,
@@ -731,11 +938,14 @@ export class ObjectUpdater {
         params: Params,
     ): U {
         let updater = this.objects.get(id) as U | undefined;
+
         if (!updater) {
             updater = new Updater(updateArg, params);
             this.objects.set(id, updater);
         }
+
         updater.update(updateArg, params);
+
         return updater;
     }
 }

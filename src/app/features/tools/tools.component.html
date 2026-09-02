@@ -1,45 +1,31 @@
 <div class="grid grid-cols-3 gap-2">
-  <app-action-button
-    variant="toolbar"
-    [title]="'Load settings from file'"
-    (click)="openFilePicker()"
-  >
+  <app-action-button variant="toolbar" [title]="'Load settings from file'" (click)="openFilePicker()">
     Load
   </app-action-button>
   <app-action-button variant="toolbar" [title]="'Save settings to file'" (click)="saveParamsFile()">
     Save
   </app-action-button>
-  <app-action-button
-    variant="toolbar-primary"
-    [title]="'Export to STL'"
-    (click)="openExportModal()"
-  >
+  <app-action-button variant="toolbar-primary" [title]="'Export to STL'" (click)="openExportModal()">
     STL
   </app-action-button>
 
   <input #fileInput type="file" accept=".json" class="hidden" (change)="loadParamsFile($event)" />
 </div>
 
-<dialog
-  #exportDialog
+<dialog #exportDialog
   class="fixed left-1/2 top-1/2 z-50 m-0 w-[min(32rem,calc(100vw-1.5rem))] -translate-x-1/2 -translate-y-1/2 rounded-2xl border border-slate-300/80 bg-white/95 p-0 text-center shadow-[0_20px_56px_rgba(21,43,72,0.28)] backdrop:bg-slate-900/35"
-  [class.hidden]="!isExportModalOpen()"
-  (close)="closeExportModal()"
->
+  [class.hidden]="!isExportModalOpen()" (close)="closeExportModal()">
   <div class="relative px-5 pb-5 pt-10">
     <button
       class="absolute right-2 top-2 inline-flex h-8 w-8 items-center justify-center rounded-full border border-transparent bg-transparent text-xl text-slate-500 transition hover:border-slate-300 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500/30"
-      type="button"
-      (click)="closeExportModal()"
-      aria-label="Close export modal"
-    >
+      type="button" (click)="closeExportModal()" aria-label="Close export modal">
       &times;
     </button>
     <p class="mx-auto mb-5 max-w-88 text-sm leading-relaxed text-slate-600">
       Export the full enclosure or only PCB mounts for quick fit checks.
     </p>
     <div class="flex flex-wrap items-center justify-center gap-2">
-      <app-action-button variant="dialog" (click)="exportPcbMountsStl()">
+      <app-action-button variant="dialog" (click)="exportMountsStl()">
         Export PCB Mounts
       </app-action-button>
       <app-action-button variant="dialog-primary" (click)="exportStl()">
