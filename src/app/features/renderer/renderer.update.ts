@@ -125,7 +125,9 @@ export class Placer {
       const refOrigin: Vec3Tuple = params.waterProof
         ? this.sealOrigin(params)
         : this.baseOrigin(params);
-      return { translate: [refOrigin[0] + params.width / 2 + SPACING, refOrigin[1], refOrigin[2]] };
+      return {
+        translate: [refOrigin[0] + params.width * 0.6 + SPACING, refOrigin[1], refOrigin[2]],
+      };
     },
   };
 
@@ -389,7 +391,8 @@ class BaseUpdater extends BaseComponentUpdater<Params> {
           baseLidScrewDiameter: p.baseLidScrewDiameter,
           lidScrewDiameter: p.lidScrewDiameter,
           sunkenLidScrewHeads: p.sunkenLidScrewHeads,
-          lidScrewHeadDiameter: p.lidScrewHeadDiameter,
+          boreHoleClearance: p.boreHoleClearance,
+          bossOuterDiameter: p.bossOuterDiameter,
           sealThickness: p.sealThickness,
         },
       ],
@@ -505,6 +508,7 @@ class HoleUpdater extends BaseComponentUpdater<Hole> {
           insertHeight: p.insertHeight,
           insertThickness: p.insertThickness,
           insertClearance: p.insertClearance,
+          waterProof: p.waterProof,
         },
         {
           shape: hole.shape,
@@ -537,6 +541,7 @@ class BaseScrewHolesUpdater extends BaseComponentUpdater<Params> {
           lidScrewHeadDepth: p.lidScrewHeadDepth,
           boreHoleClearance: p.boreHoleClearance,
           baseLidScrewDiameter: p.baseLidScrewDiameter,
+          bossOuterDiameter: p.bossOuterDiameter,
         },
       ],
       placementFn: () => ({ x: 0, y: 0, surface: 'plane' }),
@@ -560,8 +565,10 @@ class LidScrewHolesUpdater extends BaseComponentUpdater<Params> {
           cornerRadius: p.cornerRadius,
           lidScrewDiameter: p.lidScrewDiameter,
           sunkenLidScrewHeads: p.sunkenLidScrewHeads,
-          lidScrewHeadDiameter: p.lidScrewHeadDiameter,
+          boreHoleClearance: p.boreHoleClearance,
           lidScrewHeadDepth: p.lidScrewHeadDepth,
+          lidScrewHeadDiameter: p.lidScrewHeadDiameter,
+          bossOuterDiameter: p.bossOuterDiameter,
         },
       ],
       placementFn: () => ({ x: 0, y: 0, surface: 'plane' }),
@@ -584,8 +591,9 @@ class LidScrewBossUpdater extends BaseComponentUpdater<Params> {
           cornerRadius: p.cornerRadius,
           lidScrewDiameter: p.lidScrewDiameter,
           sunkenLidScrewHeads: p.sunkenLidScrewHeads,
-          lidScrewHeadDiameter: p.lidScrewHeadDiameter,
+          boreHoleClearance: p.boreHoleClearance,
           lidScrewHeadDepth: p.lidScrewHeadDepth,
+          bossOuterDiameter: p.bossOuterDiameter,
         },
       ],
       placementFn: () => ({ x: 0, y: 0, surface: 'plane' }),

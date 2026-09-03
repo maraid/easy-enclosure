@@ -84,29 +84,30 @@ const screwBoss = (
 export type DiameterMaxParams = {
   sunkenLidScrewHeads: boolean;
   lidScrewDiameter: number;
-  lidScrewHeadDiameter: number;
+  boreHoleClearance: number;
+  bossOuterDiameter: number;
 };
 
 const diameterMax = ({
   sunkenLidScrewHeads,
   lidScrewDiameter,
-  lidScrewHeadDiameter,
+  boreHoleClearance,
+  bossOuterDiameter,
 }: DiameterMaxParams) => {
-  return Math.max(lidScrewDiameter, sunkenLidScrewHeads ? lidScrewHeadDiameter : 0);
-};
-
-const bossOuterDiameter = (
-  wall: number,
-  sunkenLidScrewHeads: boolean,
-  lidScrewDiameter: number,
-  lidScrewHeadDiameter: number,
-) => {
-  return diameterMax({ sunkenLidScrewHeads, lidScrewDiameter, lidScrewHeadDiameter }) + wall * 2;
+  return Math.max(
+    lidScrewDiameter,
+    sunkenLidScrewHeads ? bossOuterDiameter + boreHoleClearance : 0,
+  );
 };
 
 type ScrewOffsetParams = Pick<
   Params,
-  'wall' | 'cornerRadius' | 'sunkenLidScrewHeads' | 'lidScrewDiameter' | 'lidScrewHeadDiameter'
+  | 'wall'
+  | 'cornerRadius'
+  | 'sunkenLidScrewHeads'
+  | 'lidScrewDiameter'
+  | 'boreHoleClearance'
+  | 'bossOuterDiameter'
 >;
 
 const screwOffset = ({
@@ -114,27 +115,26 @@ const screwOffset = ({
   cornerRadius,
   sunkenLidScrewHeads,
   lidScrewDiameter,
-  lidScrewHeadDiameter,
+  boreHoleClearance,
+  bossOuterDiameter,
 }: ScrewOffsetParams) => {
   return (
-    diameterMax({ sunkenLidScrewHeads, lidScrewDiameter, lidScrewHeadDiameter }) / 2 +
+    diameterMax({
+      sunkenLidScrewHeads,
+      lidScrewDiameter,
+      boreHoleClearance,
+      bossOuterDiameter,
+    }) /
+      2 +
     cornerRadius / 4 +
-    wall +
-    (sunkenLidScrewHeads ? wall : 0)
+    wall / 2
   );
 };
 
-export type IsSunkenParams = Pick<
-  Params,
-  'sunkenLidScrewHeads' | 'lidScrewHeadDepth' | 'lidScrewHeadDiameter'
->;
+export type IsSunkenParams = Pick<Params, 'sunkenLidScrewHeads' | 'lidScrewHeadDepth'>;
 
-export const isSunken = ({
-  sunkenLidScrewHeads,
-  lidScrewHeadDepth,
-  lidScrewHeadDiameter,
-}: IsSunkenParams) => {
-  return sunkenLidScrewHeads && lidScrewHeadDepth > 0 && lidScrewHeadDiameter > 0;
+export const isSunken = ({ sunkenLidScrewHeads, lidScrewHeadDepth }: IsSunkenParams) => {
+  return sunkenLidScrewHeads && lidScrewHeadDepth > 0;
 };
 
 export type LidScrewHolesParams = {
@@ -145,8 +145,10 @@ export type LidScrewHolesParams = {
   cornerRadius: number;
   lidScrewDiameter: number;
   sunkenLidScrewHeads: boolean;
-  lidScrewHeadDiameter: number;
+  boreHoleClearance: number;
   lidScrewHeadDepth: number;
+  bossOuterDiameter: number;
+  lidScrewHeadDiameter: number;
 };
 
 export const lidScrewHoles = ({
@@ -157,8 +159,10 @@ export const lidScrewHoles = ({
   cornerRadius,
   lidScrewDiameter,
   sunkenLidScrewHeads,
-  lidScrewHeadDiameter,
+  boreHoleClearance,
   lidScrewHeadDepth,
+  bossOuterDiameter,
+  lidScrewHeadDiameter,
 }: LidScrewHolesParams): Geom3 => {
   const subtracts: Geom3[] = [];
 
@@ -169,12 +173,13 @@ export const lidScrewHoles = ({
     cornerRadius,
     sunkenLidScrewHeads,
     lidScrewDiameter,
-    lidScrewHeadDiameter,
+    boreHoleClearance,
+    bossOuterDiameter,
   });
 
   subtracts.push(screws(length, width, holeHeight, offset, lidScrewDiameter));
 
-  if (isSunken({ sunkenLidScrewHeads, lidScrewHeadDepth, lidScrewHeadDiameter })) {
+  if (isSunken({ sunkenLidScrewHeads, lidScrewHeadDepth })) {
     subtracts.push(
       counterBoresFromBottom(length, width, offset, lidScrewHeadDiameter, lidScrewHeadDepth),
     );
@@ -192,8 +197,9 @@ export type ScrewBossParams = Pick<
   | 'cornerRadius'
   | 'lidScrewDiameter'
   | 'sunkenLidScrewHeads'
-  | 'lidScrewHeadDiameter'
+  | 'boreHoleClearance'
   | 'lidScrewHeadDepth'
+  | 'bossOuterDiameter'
 >;
 
 export const screwBosses = ({
@@ -204,8 +210,9 @@ export const screwBosses = ({
   cornerRadius,
   lidScrewDiameter,
   sunkenLidScrewHeads,
-  lidScrewHeadDiameter,
+  boreHoleClearance,
   lidScrewHeadDepth,
+  bossOuterDiameter,
 }: ScrewBossParams): Geom3 => {
   return translate(
     [-width / 2, -length / 2, 0],
@@ -218,9 +225,10 @@ export const screwBosses = ({
         cornerRadius,
         sunkenLidScrewHeads,
         lidScrewDiameter,
-        lidScrewHeadDiameter,
+        boreHoleClearance,
+        bossOuterDiameter,
       }),
-      bossOuterDiameter(wall, sunkenLidScrewHeads, lidScrewDiameter, lidScrewHeadDiameter),
+      bossOuterDiameter,
       roof,
     ),
   );
@@ -239,6 +247,7 @@ export type BaseScrewHolesParams = Pick<
   | 'lidScrewHeadDepth'
   | 'boreHoleClearance'
   | 'baseLidScrewDiameter'
+  | 'bossOuterDiameter'
 >;
 
 export const baseScrewHoles = ({
@@ -253,6 +262,7 @@ export const baseScrewHoles = ({
   lidScrewHeadDepth,
   boreHoleClearance,
   baseLidScrewDiameter,
+  bossOuterDiameter,
 }: BaseScrewHolesParams): Geom3 => {
   const subtracts: Geom3[] = [];
 
@@ -261,15 +271,14 @@ export const baseScrewHoles = ({
     cornerRadius,
     sunkenLidScrewHeads,
     lidScrewDiameter,
-    lidScrewHeadDiameter,
+    boreHoleClearance,
+    bossOuterDiameter,
   });
   subtracts.push(screws(length, width, height, offset, baseLidScrewDiameter));
 
   const baseRecessDepth = Math.min(Math.max(lidScrewHeadDepth, 0), height);
 
-  if (sunkenLidScrewHeads && lidScrewHeadDiameter > 0 && baseRecessDepth > 0) {
-    const bossOuterDiameter =
-      diameterMax({ sunkenLidScrewHeads, lidScrewDiameter, lidScrewHeadDiameter }) + wall * 2;
+  if (sunkenLidScrewHeads) {
     subtracts.push(
       counterBores(
         length,

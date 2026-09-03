@@ -499,10 +499,16 @@
       </div>
 
       <div class="input-group">
-        <label>Base Hole Clearance</label>
+        <label>Bore Hole Clearance</label>
         <input type="number" min="0.01" step="0.01" [value]="params().boreHoleClearance"
           (keydown.enter)="$any($event.target).blur()"
           (blur)="setNumberParam('boreHoleClearance', $any($event.target).value)" />
+      </div>
+      <div class="input-group">
+        <label>Boss OuterDiameter</label>
+        <input type="number" min="0.01" step="0.01" [value]="params().bossOuterDiameter"
+          (keydown.enter)="$any($event.target).blur()"
+          (blur)="setNumberParam('bossOuterDiameter', $any($event.target).value)" />
       </div>
       }
 

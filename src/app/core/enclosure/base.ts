@@ -2,11 +2,9 @@ import { booleans } from '@jscad/modeling';
 import { Params } from '../params';
 
 import { clover, centeredHollowRoundCube, roundedCube } from './utils';
-import { waterProofSealCutout } from './waterproofseal';
-import { baseScrewHoles } from './screws';
 import { translate } from '@jscad/modeling/src/operations/transforms';
 
-const { subtract, union } = booleans;
+const { subtract } = booleans;
 
 export type BaseGeometryParams = Pick<
   Params,
@@ -23,7 +21,8 @@ export type BaseGeometryParams = Pick<
   | 'sunkenLidScrewHeads'
   | 'baseLidScrewDiameter'
   | 'lidScrewDiameter'
-  | 'lidScrewHeadDiameter'
+  | 'boreHoleClearance'
+  | 'bossOuterDiameter'
   | 'sealThickness'
 >;
 
@@ -39,7 +38,8 @@ const cloveredFrame = ({
   sunkenLidScrewHeads,
   baseLidScrewDiameter,
   lidScrewDiameter,
-  lidScrewHeadDiameter,
+  boreHoleClearance,
+  bossOuterDiameter,
   waterProof,
 }: BaseGeometryParams) => {
   let _wall = wall;
@@ -50,7 +50,7 @@ const cloveredFrame = ({
   const diameterMax = Math.max(
     baseLidScrewDiameter,
     lidScrewDiameter,
-    sunkenLidScrewHeads ? lidScrewHeadDiameter : 0,
+    sunkenLidScrewHeads ? bossOuterDiameter + boreHoleClearance : 0,
   );
 
   return translate(
@@ -59,12 +59,7 @@ const cloveredFrame = ({
       roundedCube(width, length, height, cornerRadius),
       translate(
         [_wall, _wall, floor],
-        clover(
-          width - _wall * 2,
-          length - _wall * 2,
-          height,
-          diameterMax / 2 + cornerRadius / 4 + wall / 2 + (sunkenLidScrewHeads ? wall : 0),
-        ),
+        clover(width - _wall * 2, length - _wall * 2, height, diameterMax / 2 + cornerRadius / 4),
       ),
     ),
   );

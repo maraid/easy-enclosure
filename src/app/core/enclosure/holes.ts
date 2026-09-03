@@ -7,10 +7,15 @@ import { Hole } from '../params';
 const TOP_HOLE_DEPTH_TOLERANCE = 0.2;
 
 export const hole = (
-  { floor, roof, wall, insertHeight, insertThickness, insertClearance }: Params,
+  { floor, roof, wall, insertHeight, insertThickness, insertClearance, waterProof }: Params,
   { shape, diameter, width: holeWidth, length: holeLength, surface }: Hole,
 ) => {
-  const wallThickness = insertThickness + insertClearance * 2 + wall * 2;
+  let wallThickness = wall;
+  if (waterProof) {
+    wallThickness = wall * 2 + insertClearance * 2 + insertThickness;
+  } else {
+    wallThickness = wall;
+  }
   const lidThickness = roof + insertHeight + TOP_HOLE_DEPTH_TOLERANCE;
   const bottomThickness = floor;
 

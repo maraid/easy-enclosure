@@ -99,6 +99,7 @@ export type Params = {
   lidScrewHeadDiameter: number;
   lidScrewHeadDepth: number;
   boreHoleClearance: number;
+  bossOuterDiameter: number;
   pcb: PCB;
 };
 
@@ -249,6 +250,7 @@ export const DEFAULT_PARAMS: Params = {
   lidScrewHeadDiameter: 4,
   lidScrewHeadDepth: 3,
   boreHoleClearance: 0.04,
+  bossOuterDiameter: 6,
   pcb: {
     id: 'pcb',
     enabled: true,
