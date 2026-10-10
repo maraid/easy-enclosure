@@ -112,6 +112,7 @@ export type Params = {
   showBase: boolean;
   showLidInsert: boolean;
   showGrid: boolean;
+  gradient: boolean;
   gridSpacing: number;
   cornerRadius: number;
   holes: Hole[];
@@ -149,6 +150,7 @@ export const DEFAULT_PARAMS: Params = {
   showBase: true,
   showLidInsert: true,
   showGrid: true,
+  gradient: true,
   gridSpacing: 10,
   cornerRadius: 3,
   holes: [

@@ -1103,6 +1103,14 @@
           (change)="setBooleanParam('showGrid', $any($event.target).checked)"
         />
       </div>
+      <div class="input-group grid-toggle-group">
+        <label>Gradient</label>
+        <input
+          type="checkbox"
+          [checked]="params().gradient"
+          (change)="setBooleanParam('gradient', $any($event.target).checked)"
+        />
+      </div>
       <div class="input-group input-group-full">
         <label>Grid Spacing (mm)</label>
         <input

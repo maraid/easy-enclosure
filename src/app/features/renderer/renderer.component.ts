@@ -29,6 +29,7 @@ import { Surface } from '../../core/enclosure';
 
 const gridDeps = [
   'showGrid',
+  'gradient',
   'gridSpacing',
   'length',
   'width',
@@ -1301,6 +1302,30 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
     const gridEntity = this.buildGridEntity(params, bounds);
     // The grid is a reference plane sitting under the model, so list it first
     // so it draws before the solid geometry.
+
+    if (params.gradient) {
+      const zMin = bounds[0][2];
+      const zMax = bounds[1][2];
+      // const lo = [0.35, 0.55, 0.9];
+      const lo = [0.33, 0.62, 0.6, 1];
+      const hi = [0.6, 0.6, 0.33];
+      modelEntities.forEach((e) => {
+        const g = e.geometry as any;
+        const t = g.transforms;
+        g.colors = g.positions.map((p: number[]) => {
+          const z = t[2] * p[0] + t[6] * p[1] + t[10] * p[2] + t[14];
+          const k = zMax > zMin ? (z - zMin) / (zMax - zMin) : 0;
+          return [
+            lo[0] + (hi[0] - lo[0]) * k,
+            lo[1] + (hi[1] - lo[1]) * k,
+            lo[2] + (hi[2] - lo[2]) * k,
+            1,
+          ];
+        });
+        e.visuals = { ...e.visuals, useVertexColors: true };
+      });
+    }
+
     this.baseRenderEntities = gridEntity ? [gridEntity, ...modelEntities] : modelEntities;
 
     this.featureCandidates = this.objects.getFeatureEntries().map((entry) => {
