@@ -187,6 +187,8 @@ label {
   float: right;
   margin-right: 8px;
   text-align: center;
+  font-size: 18px;
+  line-height: 1;
 }
 
 .sub-params {
@@ -197,6 +199,12 @@ label {
   border-radius: 10px;
   background: rgba(248, 251, 255, 0.72);
   font-size: 12px;
+  transition: border-color 140ms ease, background-color 140ms ease, box-shadow 140ms ease;
+}
+
+.sub-params:hover {
+  border-color: var(--ui-primary);
+  background: rgba(232, 239, 246, 0.9);
 }
 
 .sub-params.selected-feature {
@@ -210,6 +218,44 @@ label {
   gap: 8px;
   margin: 8px 0 10px;
   color: var(--text-primary);
+  cursor: pointer;
+}
+
+.component-header::before {
+  content: '▾';
+  flex: 0 0 14px;
+  color: var(--text-secondary);
+  font-size: 17px;
+  line-height: 1;
+}
+
+.component-collapsed .component-header::before {
+  content: '▸';
+}
+
+.sub-params.component-collapsed > :not(.component-header) {
+  display: none;
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 7px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--text-secondary);
+  background: transparent;
+  cursor: pointer;
+}
+
+.icon-btn:hover,
+.icon-btn:focus-visible {
+  color: var(--ui-primary);
+  background: rgba(114, 141, 168, 0.14);
 }
 
 .pcb-holes {
@@ -235,7 +281,7 @@ label {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  cursor: text;
+  cursor: pointer;
 }
 
 .component-name-input {
@@ -258,12 +304,21 @@ label {
   padding: 7px;
   min-height: 34px;
   border-radius: 999px;
-  color: #eef7ff;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 0;
+  box-shadow: none;
   cursor: pointer;
 }
 
 .remove-btn {
   min-width: 34px;
+}
+
+.remove-btn,
+.edit-btn {
+  font-size: 16px;
+  line-height: 1;
 }
 
 .copy-btn {
@@ -282,6 +337,16 @@ label {
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 2;
+}
+
+.remove-btn:hover,
+.copy-btn:hover,
+.remove-btn:focus-visible,
+.copy-btn:focus-visible {
+  color: var(--ui-primary);
+  background: transparent;
+  box-shadow: none;
+  transform: none;
 }
 
 .simple-reset-btn {

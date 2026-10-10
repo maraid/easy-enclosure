@@ -29,6 +29,8 @@ export class EnclosureStateService {
   readonly params = signal<Params>(this.loadParams());
   readonly loading = signal(false);
   readonly selectedFeature = signal<FeatureTarget | null>(null);
+  readonly featureScrollRequest = signal(0);
+  readonly featureHighlightClearRequest = signal(0);
 
   readonly holeCount = computed(() => this.params().holes.length);
 
@@ -105,7 +107,15 @@ export class EnclosureStateService {
     this.selectedFeature.set(null);
   }
 
-  selectFeature(feature: FeatureTarget | null): void {
+  selectFeature(feature: FeatureTarget | null, scrollToFeature = false): void {
     this.selectedFeature.set(feature);
+    if (scrollToFeature) {
+      this.featureScrollRequest.update((request) => request + 1);
+    }
+  }
+
+  clearFeatureHighlight(): void {
+    this.selectedFeature.set(null);
+    this.featureHighlightClearRequest.update((request) => request + 1);
   }
 }

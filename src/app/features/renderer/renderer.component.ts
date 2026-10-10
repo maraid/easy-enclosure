@@ -289,6 +289,8 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
 
     effect(() => {
       this.state.selectedFeature();
+      this.state.featureHighlightClearRequest();
+      this.hoveredFeature = null;
       this.refreshRenderEntities();
     });
   }
@@ -433,13 +435,13 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
     const feature = this.featureAtScreenPosition(event);
 
     if (feature && this.isDraggable(feature)) {
-      this.state.selectFeature(feature);
+      this.state.selectFeature(feature, true);
       this.beginDrag(feature, event);
       this.containerRef?.nativeElement.setPointerCapture(event.pointerId);
       return; // don't fall through to orbit
     }
 
-    if (feature) this.state.selectFeature(feature);
+    if (feature) this.state.selectFeature(feature, true);
     this.pointerDown = true;
     this.lastX = event.pageX;
     this.lastY = event.pageY;

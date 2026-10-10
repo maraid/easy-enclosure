@@ -81,6 +81,7 @@ export type InternalWall = {
 
 export type PCB = {
   id: string;
+  name?: string;
   x: number;
   y: number;
   z: number;
@@ -299,6 +300,7 @@ export const DEFAULT_PARAMS: Params = {
   pcbs: [
     {
       id: 'pcb',
+      name: 'PCB 1',
       enabled: true,
       x: 0,
       y: 0,

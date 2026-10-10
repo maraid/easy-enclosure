@@ -12,7 +12,7 @@ import type {
 import { EnclosureStateService, FeatureTarget } from '../../core/state/enclosure-state.service';
 
 type Surface = 'top' | 'bottom' | 'left' | 'right' | 'front' | 'back';
-type RenameableComponent = 'hole' | 'vent' | 'pcbMount' | 'pcbHole' | 'internalWall' | 'cableClamp';
+type RenameableComponent = 'hole' | 'vent' | 'pcbMount' | 'pcbHole' | 'internalWall' | 'cableClamp' | 'pcb';
 
 @Component({
   selector: 'app-params-form',
@@ -25,19 +25,26 @@ export class ParamsFormComponent {
 
   readonly activeTab = signal<string | null>(null);
   readonly renamingItem = signal<{ type: RenameableComponent; id: string } | null>(null);
+  private lastHandledScrollRequest = 0;
 
   readonly surfaces: Surface[] = ['front', 'right', 'back', 'left', 'top', 'bottom'];
 
   constructor() {
     effect(() => {
       const feature = this.state.selectedFeature();
+      const scrollRequest = this.state.featureScrollRequest();
       if (!feature) {
         return;
       }
 
+      if (scrollRequest === this.lastHandledScrollRequest) {
+        return;
+      }
+      this.lastHandledScrollRequest = scrollRequest;
+
       const tabByType = {
-        base: 'generalTab',
-        lid: 'generalTab',
+        base: 'baseTab',
+        lid: 'lidTab',
         lidInsert: 'lidInsertTab',
         hole: 'holesTab',
         vent: 'ventsTab',
@@ -51,10 +58,22 @@ export class ParamsFormComponent {
         pcb: 'pcbTab',
       } as const;
       this.activeTab.set(tabByType[feature.type]);
-      setTimeout(() =>
-        document
-          .getElementById(feature.id)
-          ?.scrollIntoView({ block: 'center', behavior: 'smooth' }),
+      // Let the accordion render open before moving the viewport to the item.
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() =>
+          {
+            const entry = document.getElementById(feature.id);
+            if (!entry) {
+              return;
+            }
+
+            entry.classList.remove('component-collapsed');
+            if (entry instanceof HTMLDetailsElement) {
+              entry.open = true;
+            }
+            entry.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          },
+        ),
       );
     });
   }
@@ -99,17 +118,26 @@ export class ParamsFormComponent {
   }
 
   setActiveTab(tab: string): void {
-    this.activeTab.set(this.activeTab() === tab ? null : tab);
+    const isClosing = this.activeTab() === tab;
+    this.activeTab.set(isClosing ? null : tab);
+    if (isClosing) {
+      // The form click handler runs after this header handler and may reselect
+      // the accordion's feature, so clear it after the click has propagated.
+      queueMicrotask(() => {
+        this.state.clearFeatureHighlight();
+        setTimeout(() => this.state.clearFeatureHighlight());
+      });
+    }
   }
 
   resetToSimpleEnclosure(): void {
     this.state.resetToSimpleEnclosure();
-    this.activeTab.set('generalTab');
+    this.activeTab.set('baseTab');
   }
 
   resetToDefaultEnclosure(): void {
     this.state.resetToDefaultEnclosure();
-    this.activeTab.set('generalTab');
+    this.activeTab.set('baseTab');
   }
 
   setNumberParam<K extends keyof Params>(key: K, rawValue: string): void {
@@ -152,7 +180,7 @@ export class ParamsFormComponent {
 
   addPcb(): void {
     const current = this.params();
-    const next = { ...current.pcbs[0], id: crypto.randomUUID(), x: 0, y: 0 };
+    const next = { ...current.pcbs[0], id: crypto.randomUUID(), name: `PCB ${current.pcbs.length + 1}`, x: 0, y: 0 };
     this.state.patchParams({ pcbs: [...current.pcbs, next] });
   }
 
@@ -503,7 +531,14 @@ export class ParamsFormComponent {
 
   startRenaming(type: RenameableComponent, id: string): void {
     this.renamingItem.set({ type, id });
-    setTimeout(() => document.getElementById(this.renameInputId(type, id))?.focus());
+    document.getElementById(id)?.classList.remove('component-collapsed');
+    requestAnimationFrame(() => {
+      const input = document.getElementById(this.renameInputId(type, id)) as HTMLInputElement | null;
+      input?.focus();
+      if (input) {
+        input.setSelectionRange(0, input.value.length);
+      }
+    });
   }
 
   isRenaming(type: RenameableComponent, id: string): boolean {
@@ -528,6 +563,9 @@ export class ParamsFormComponent {
       case 'cableClamp':
         this.updateCableClamp(id, { name });
         break;
+      case 'pcb':
+        this.updatePcbAt(id, { name });
+        break;
       default:
         console.warn(`Unknown component type: ${type}`);
         break;
@@ -543,12 +581,23 @@ export class ParamsFormComponent {
     return Math.max(1, this.displayName(name, defaultName).length);
   }
 
+  toggleComponent(event: Event): void {
+    const target = event.target;
+    if (target instanceof Element && target.closest('button, input, select, textarea')) {
+      return;
+    }
+    (target as Element)?.closest('.sub-params')?.classList.toggle('component-collapsed');
+  }
+
+  clearFeatureHighlight(): void {
+    this.state.selectFeature(null);
+  }
+
   selectFeatureFromEditor(event: Event): void {
     const target = event.target;
     if (!(target instanceof Element)) {
       return;
     }
-
     const entry = target.closest<HTMLElement>('[data-feature-type], [id].sub-params, [id].accordian');
     if (!entry?.id) {
       return;
@@ -567,10 +616,6 @@ export class ParamsFormComponent {
     const params = this.params();
     if (entry.id === 'definition-base') {
       this.state.selectFeature({ id: entry.id, type: 'base' });
-      return;
-    }
-    if (entry.id === 'definition-lid') {
-      this.state.selectFeature({ id: entry.id, type: 'lidInsert' });
       return;
     }
     if (params.holes.some((item) => item.id === entry.id)) {

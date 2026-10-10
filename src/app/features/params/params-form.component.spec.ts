@@ -19,10 +19,10 @@ describe('ParamsFormComponent', () => {
   });
 
   it('toggles accordion tabs', () => {
-    component.setActiveTab('generalTab');
-    expect(component.activeTab()).toBe('generalTab');
+    component.setActiveTab('baseTab');
+    expect(component.activeTab()).toBe('baseTab');
 
-    component.setActiveTab('generalTab');
+    component.setActiveTab('baseTab');
     expect(component.activeTab()).toBeNull();
   });
 
@@ -30,7 +30,7 @@ describe('ParamsFormComponent', () => {
     component.setActiveTab('gridTab');
     component.resetToSimpleEnclosure();
 
-    expect(component.activeTab()).toBe('generalTab');
+    expect(component.activeTab()).toBe('baseTab');
     expect(state.params().holes.length).toBe(0);
     expect(state.params().pcbMounts.length).toBe(0);
     expect(state.params().internalWalls.length).toBe(0);

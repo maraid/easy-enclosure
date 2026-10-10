@@ -14,10 +14,10 @@
     </button>
   </div>
 
-  <div id="definition-base" data-feature-id="base" data-feature-type="base" class="accordian" [class.active]="activeTab() === 'generalTab'">
-    <p class="accordian-header" (click)="setActiveTab('generalTab')">
-      General
-      <span class="accordian-icon">{{ activeTab() === 'generalTab' ? '-' : '+' }}</span>
+  <div id="definition-base" data-feature-id="base" data-feature-type="base" class="accordian" [class.active]="activeTab() === 'baseTab'">
+    <p class="accordian-header" (click)="setActiveTab('baseTab')">
+      Base
+      <span class="accordian-icon">{{ activeTab() === 'baseTab' ? '▾' : '▸' }}</span>
     </p>
     <div class="accordian-body">
       <div class="input-group">
@@ -71,16 +71,6 @@
         />
       </div>
       <div class="input-group">
-        <label>Lid Thickness</label>
-        <input
-          type="number"
-          min="1"
-          [value]="params().roof"
-          (keydown.enter)="$any($event.target).blur()"
-          (blur)="setNumberParam('roof', $any($event.target).value)"
-        />
-      </div>
-      <div class="input-group">
         <label>Corner Radius</label>
         <input
           type="number"
@@ -93,10 +83,29 @@
     </div>
   </div>
 
-  <div id="definition-lid" data-feature-id="lid-insert" data-feature-type="lidInsert" class="accordian" [class.active]="activeTab() === 'lidInsertTab'">
+  <div id="definition-lid" data-feature-id="lid" data-feature-type="lid" class="accordian" [class.active]="activeTab() === 'lidTab'">
+    <p class="accordian-header" (click)="setActiveTab('lidTab')">
+      Lid
+      <span class="accordian-icon">{{ activeTab() === 'lidTab' ? '▾' : '▸' }}</span>
+    </p>
+    <div class="accordian-body">
+      <div class="input-group">
+        <label>Lid Thickness</label>
+        <input
+          type="number"
+          min="1"
+          [value]="params().roof"
+          (keydown.enter)="$any($event.target).blur()"
+          (blur)="setNumberParam('roof', $any($event.target).value)"
+        />
+      </div>
+    </div>
+  </div>
+
+  <div id="definition-lid-insert" data-feature-id="lid-insert" data-feature-type="lidInsert" class="accordian" [class.active]="activeTab() === 'lidInsertTab'">
     <p class="accordian-header" (click)="setActiveTab('lidInsertTab')">
       Lid Insert
-      <span class="accordian-icon">{{ activeTab() === 'lidInsertTab' ? '-' : '+' }}</span>
+      <span class="accordian-icon">{{ activeTab() === 'lidInsertTab' ? '▾' : '▸' }}</span>
     </p>
     <div class="accordian-body">
       <div class="input-group">
@@ -138,16 +147,18 @@
   <div class="accordian" [class.active]="activeTab() === 'holesTab'">
     <p class="accordian-header" (click)="setActiveTab('holesTab')">
       Holes
-      <span class="accordian-icon">{{ activeTab() === 'holesTab' ? '-' : '+' }}</span>
+      <span class="accordian-icon">{{ activeTab() === 'holesTab' ? '▾' : '▸' }}</span>
     </p>
     <div class="accordian-body">
       @for (hole of params().holes; track hole.id) {
         <div
-          class="sub-params"
+          class="sub-params component-collapsed"
           [id]="hole.id"
           [class.selected-feature]="isSelected('hole', hole.id)"
+          (mouseenter)="selectFeatureFromEditor($event)"
+          (mouseleave)="clearFeatureHighlight()"
         >
-          <div class="component-header">
+          <div class="component-header" (click)="toggleComponent($event)">
             @if (isRenaming('hole', hole.id)) {
               <input
                 [id]="renameInputId('hole', hole.id)"
@@ -161,12 +172,14 @@
             } @else {
               <b
                 class="component-name"
-                title="Double-click to rename"
-                (dblclick)="startRenaming('hole', hole.id)"
+                title="Component name"
               >
                 {{ displayName(hole.name, 'Hole ' + ($index + 1)) }}
               </b>
             }
+            <button [hidden]="isRenaming('hole', hole.id)" class="icon-btn edit-btn" type="button" title="Rename component" aria-label="Rename component" (click)="$event.stopPropagation(); startRenaming('hole', hole.id)">
+              <span aria-hidden="true">✎</span>
+            </button>
             <button
               class="copy-btn"
               type="button"
@@ -174,12 +187,9 @@
               aria-label="Duplicate component"
               (click)="copyHole(hole.id)"
             >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="8" y="8" width="11" height="11" rx="1" />
-                <path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" />
-              </svg>
+              ⧉
             </button>
-            <button class="remove-btn" type="button" (click)="removeHole(hole.id)">X</button>
+            <button class="remove-btn" type="button" title="Delete component" aria-label="Delete component" (click)="removeHole(hole.id)"><span aria-hidden="true">🗑</span></button>
           </div>
 
           <div class="input-group">
@@ -296,16 +306,18 @@
   <div class="accordian" [class.active]="activeTab() === 'ventsTab'">
     <p class="accordian-header" (click)="setActiveTab('ventsTab')">
       Vents
-      <span class="accordian-icon">{{ activeTab() === 'ventsTab' ? '-' : '+' }}</span>
+      <span class="accordian-icon">{{ activeTab() === 'ventsTab' ? '▾' : '▸' }}</span>
     </p>
     <div class="accordian-body">
       @for (vent of params().vents; track vent.id) {
         <div
-          class="sub-params"
+          class="sub-params component-collapsed"
           [id]="vent.id"
           [class.selected-feature]="isSelected('vent', vent.id)"
+          (mouseenter)="selectFeatureFromEditor($event)"
+          (mouseleave)="clearFeatureHighlight()"
         >
-          <div class="component-header">
+          <div class="component-header" (click)="toggleComponent($event)">
             @if (isRenaming('vent', vent.id)) {
               <input
                 [id]="renameInputId('vent', vent.id)"
@@ -317,12 +329,12 @@
             } @else {
               <b
                 class="component-name"
-                title="Double-click to rename"
-                (dblclick)="startRenaming('vent', vent.id)"
+                title="Component name"
               >
                 {{ displayName(vent.name, 'Vent ' + ($index + 1)) }}
               </b>
             }
+            <button [hidden]="isRenaming('vent', vent.id)" class="icon-btn edit-btn" type="button" title="Rename component" aria-label="Rename component" (click)="$event.stopPropagation(); startRenaming('vent', vent.id)"><span aria-hidden="true">✎</span></button>
             <button
               class="copy-btn"
               type="button"
@@ -332,7 +344,7 @@
             >
               ⧉
             </button>
-            <button class="remove-btn" type="button" (click)="removeVent(vent.id)">X</button>
+            <button class="remove-btn" type="button" title="Delete component" aria-label="Delete component" (click)="removeVent(vent.id)"><span aria-hidden="true">🗑</span></button>
           </div>
           <div class="input-group">
             <label>Surface</label
@@ -435,15 +447,20 @@
   <div class="accordian" [class.active]="activeTab() === 'pcbMountsTab'">
     <p class="accordian-header" (click)="setActiveTab('pcbMountsTab')">
       PCB Mounts
-      <span class="accordian-icon">{{ activeTab() === 'pcbMountsTab' ? '-' : '+' }}</span>
+      <span class="accordian-icon">{{ activeTab() === 'pcbMountsTab' ? '▾' : '▸' }}</span>
     </p>
     <div class="accordian-body">
       @for (mount of params().pcbMounts; track mount.id) {
-        <div class="sub-params" [id]="mount.id" [class.selected-feature]="isSelected('pcbMount', mount.id)">
-          <div class="component-header">
-            <b class="component-name">{{ displayName(mount.name, 'Mount ' + ($index + 1)) }}</b>
-            <button class="copy-btn" type="button" title="Duplicate component" (click)="copyPcbMount(mount.id)">Copy</button>
-            <button class="remove-btn" type="button" (click)="removePcbMount(mount.id)">X</button>
+        <div class="sub-params component-collapsed" [id]="mount.id" [class.selected-feature]="isSelected('pcbMount', mount.id)" (mouseenter)="selectFeatureFromEditor($event)" (mouseleave)="clearFeatureHighlight()">
+          <div class="component-header" (click)="toggleComponent($event)">
+            @if (isRenaming('pcbMount', mount.id)) {
+              <input [id]="renameInputId('pcbMount', mount.id)" class="component-name-input" type="text" [value]="displayName(mount.name, 'Mount ' + ($index + 1))" [attr.size]="nameInputSize(mount.name, 'Mount ' + ($index + 1))" (keydown.enter)="$any($event.target).blur()" (blur)="finishRenaming('pcbMount', mount.id, $any($event.target).value)" />
+            } @else {
+              <b class="component-name">{{ displayName(mount.name, 'Mount ' + ($index + 1)) }}</b>
+            }
+            <button [hidden]="isRenaming('pcbMount', mount.id)" class="icon-btn edit-btn" type="button" title="Rename component" aria-label="Rename component" (click)="$event.stopPropagation(); startRenaming('pcbMount', mount.id)"><span aria-hidden="true">✎</span></button>
+            <button class="copy-btn" type="button" title="Duplicate component" aria-label="Duplicate component" (click)="copyPcbMount(mount.id)">⧉</button>
+            <button class="remove-btn" type="button" title="Delete component" aria-label="Delete component" (click)="removePcbMount(mount.id)"><span aria-hidden="true">🗑</span></button>
           </div>
           <div class="input-group"><label>Surface</label><select [value]="mount.surface" (change)="updatePcbMount(mount.id, { surface: $any($event.target).value })">@for (surface of surfaces; track surface) { <option [value]="surface">{{ surfaceLabel(surface) }}</option> }</select></div>
           <div class="input-group"><label>X</label><input type="number" [value]="mount.x" (blur)="updatePcbMount(mount.id, { x: +$any($event.target).value })" /></div>
@@ -460,16 +477,18 @@
   <div class="accordian" [class.active]="activeTab() === 'internalWallsTab'">
     <p class="accordian-header" (click)="setActiveTab('internalWallsTab')">
       Internal Walls
-      <span class="accordian-icon">{{ activeTab() === 'internalWallsTab' ? '-' : '+' }}</span>
+      <span class="accordian-icon">{{ activeTab() === 'internalWallsTab' ? '▾' : '▸' }}</span>
     </p>
     <div class="accordian-body">
       @for (wallItem of params().internalWalls; track wallItem.id) {
         <div
-          class="sub-params"
+          class="sub-params component-collapsed"
           [id]="wallItem.id"
           [class.selected-feature]="isSelected('internalWall', wallItem.id)"
+          (mouseenter)="selectFeatureFromEditor($event)"
+          (mouseleave)="clearFeatureHighlight()"
         >
-          <div class="component-header">
+          <div class="component-header" (click)="toggleComponent($event)">
             @if (isRenaming('internalWall', wallItem.id)) {
               <input
                 [id]="renameInputId('internalWall', wallItem.id)"
@@ -483,12 +502,12 @@
             } @else {
               <b
                 class="component-name"
-                title="Double-click to rename"
-                (dblclick)="startRenaming('internalWall', wallItem.id)"
+                title="Component name"
               >
                 {{ displayName(wallItem.name, 'Internal Wall ' + ($index + 1)) }}
               </b>
             }
+            <button [hidden]="isRenaming('internalWall', wallItem.id)" class="icon-btn edit-btn" type="button" title="Rename component" aria-label="Rename component" (click)="$event.stopPropagation(); startRenaming('internalWall', wallItem.id)"><span aria-hidden="true">✎</span></button>
             <button
               class="copy-btn"
               type="button"
@@ -496,13 +515,10 @@
               aria-label="Duplicate component"
               (click)="copyInternalWall(wallItem.id)"
             >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="8" y="8" width="11" height="11" rx="1" />
-                <path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" />
-              </svg>
+              ⧉
             </button>
             <button class="remove-btn" type="button" (click)="removeInternalWall(wallItem.id)">
-              X
+<span aria-hidden="true">🗑</span>
             </button>
           </div>
           <div class="input-group">
@@ -590,16 +606,18 @@
   <div class="accordian" [class.active]="activeTab() === 'cableClampsTab'">
     <p class="accordian-header" (click)="setActiveTab('cableClampsTab')">
       Cable Clamps
-      <span class="accordian-icon">{{ activeTab() === 'cableClampsTab' ? '-' : '+' }}</span>
+      <span class="accordian-icon">{{ activeTab() === 'cableClampsTab' ? '▾' : '▸' }}</span>
     </p>
     <div class="accordian-body">
       @for (clamp of params().cableClamps; track clamp.id) {
         <div
-          class="sub-params"
+          class="sub-params component-collapsed"
           [id]="clamp.id"
           [class.selected-feature]="isSelected('cableClamp', clamp.id)"
+          (mouseenter)="selectFeatureFromEditor($event)"
+          (mouseleave)="clearFeatureHighlight()"
         >
-          <div class="component-header">
+          <div class="component-header" (click)="toggleComponent($event)">
             @if (isRenaming('cableClamp', clamp.id)) {
               <input
                 [id]="renameInputId('cableClamp', clamp.id)"
@@ -613,12 +631,12 @@
             } @else {
               <b
                 class="component-name"
-                title="Double-click to rename"
-                (dblclick)="startRenaming('cableClamp', clamp.id)"
+                title="Component name"
               >
                 {{ displayName(clamp.name, 'Clamp ' + ($index + 1)) }}
               </b>
             }
+            <button [hidden]="isRenaming('cableClamp', clamp.id)" class="icon-btn edit-btn" type="button" title="Rename component" aria-label="Rename component" (click)="$event.stopPropagation(); startRenaming('cableClamp', clamp.id)"><span aria-hidden="true">✎</span></button>
             <button
               class="copy-btn"
               type="button"
@@ -626,12 +644,9 @@
               aria-label="Duplicate component"
               (click)="copyCableClamp(clamp.id)"
             >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="8" y="8" width="11" height="11" rx="1" />
-                <path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" />
-              </svg>
+              ⧉
             </button>
-            <button class="remove-btn" type="button" (click)="removeCableClamp(clamp.id)">X</button>
+            <button class="remove-btn" type="button" title="Delete component" aria-label="Delete component" (click)="removeCableClamp(clamp.id)"><span aria-hidden="true">🗑</span></button>
           </div>
           <div class="input-group">
             <label>Surface</label>
@@ -763,7 +778,7 @@
   >
     <p class="accordian-header" (click)="setActiveTab('waterproofingTab')">
       Waterproofing
-      <span class="accordian-icon">{{ activeTab() === 'waterproofingTab' ? '-' : '+' }}</span>
+      <span class="accordian-icon">{{ activeTab() === 'waterproofingTab' ? '▾' : '▸' }}</span>
     </p>
     <div class="accordian-body">
       <div class="input-group">
@@ -794,7 +809,7 @@
   <div id="definition-screwHoles" data-feature-id="lid-screw-hole" data-feature-type="screwHole" data-feature-group="screwHoles" class="accordian" [class.active]="activeTab() === 'lidScrewsTab'">
     <p class="accordian-header" (click)="setActiveTab('lidScrewsTab')">
       Lid Screws
-      <span class="accordian-icon">{{ activeTab() === 'lidScrewsTab' ? '-' : '+' }}</span>
+      <span class="accordian-icon">{{ activeTab() === 'lidScrewsTab' ? '▾' : '▸' }}</span>
     </p>
     <div class="accordian-body">
       <div class="input-group">
@@ -895,7 +910,7 @@
   <div id="definition-wallMount" data-feature-id="wallMount" data-feature-type="wallMount" class="accordian" [class.active]="activeTab() === 'wallMountsTab'">
     <p class="accordian-header" (click)="setActiveTab('wallMountsTab')">
       Wall Mounts
-      <span class="accordian-icon">{{ activeTab() === 'wallMountsTab' ? '-' : '+' }}</span>
+      <span class="accordian-icon">{{ activeTab() === 'wallMountsTab' ? '▾' : '▸' }}</span>
     </p>
     <div class="accordian-body">
       <div class="input-group">
@@ -936,13 +951,18 @@
   <div class="accordian" [class.active]="activeTab() === 'pcbTab'">
     <p class="accordian-header" (click)="setActiveTab('pcbTab')">
       PCB Overlay
-      <span class="accordian-icon">{{ activeTab() === 'pcbTab' ? '-' : '+' }}</span>
+      <span class="accordian-icon">{{ activeTab() === 'pcbTab' ? '▾' : '▸' }}</span>
     </p>
     <div class="accordian-body">
       @for (board of params().pcbs; track board.id) {
-        <details class="sub-params pcb-entry" [id]="board.id" open>
+        <details class="sub-params pcb-entry" [id]="board.id" (mouseenter)="selectFeatureFromEditor($event)" (mouseleave)="clearFeatureHighlight()">
           <summary class="component-header">
-            <b class="component-name">{{ board.id }}</b>
+            @if (isRenaming('pcb', board.id)) {
+              <input [id]="renameInputId('pcb', board.id)" class="component-name-input" type="text" [value]="displayName(board.name, 'PCB ' + ($index + 1))" (keydown.enter)="$any($event.target).blur()" (blur)="finishRenaming('pcb', board.id, $any($event.target).value)" />
+            } @else {
+              <b class="component-name">{{ displayName(board.name, 'PCB ' + ($index + 1)) }}</b>
+            }
+            <button [hidden]="isRenaming('pcb', board.id)" class="icon-btn edit-btn" type="button" title="Rename PCB" aria-label="Rename PCB" (click)="$event.stopPropagation(); startRenaming('pcb', board.id)"><span aria-hidden="true">✎</span></button>
             <button
               class="copy-btn"
               type="button"
@@ -950,12 +970,9 @@
               aria-label="Duplicate component"
               (click)="copyPcb(board.id)"
             >
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <rect x="8" y="8" width="11" height="11" rx="1" />
-                <path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" />
-              </svg>
+              ⧉
             </button>
-            <button class="remove-btn" type="button" (click)="removePcb(board.id)">X</button>
+            <button class="remove-btn" type="button" title="Delete PCB" aria-label="Delete PCB" (click)="removePcb(board.id)"><span aria-hidden="true">🗑</span></button>
           </summary>
 
           <div class="input-group checkbox-group">
@@ -1004,7 +1021,7 @@
                 [id]="pcbHole.id"
                 [class.selected-feature]="isSelected('pcbHole', pcbHole.id)"
               >
-                <div class="component-header">
+                <div class="component-header" (click)="toggleComponent($event)">
                   <b class="component-name">Hole {{ holeIndex + 1 }}</b>
                   <button
                     class="copy-btn"
@@ -1013,13 +1030,10 @@
                     aria-label="Duplicate component"
                     (click)="copyPcbHole(board.id, pcbHole.id)"
                   >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <rect x="8" y="8" width="11" height="11" rx="1" />
-                      <path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" />
-                    </svg>
+                    ⧉
                   </button>
                   @if (board.holes.length > 1) {
-                    <button class="remove-btn" type="button" (click)="removePcbHole(board.id, pcbHole.id)">X</button>
+                    <button class="remove-btn" type="button" title="Delete hole" aria-label="Delete hole" (click)="removePcbHole(board.id, pcbHole.id)">🗑</button>
                   }
                 </div>
                 <div class="input-group">
@@ -1060,7 +1074,7 @@
   <div class="accordian" [class.active]="activeTab() === 'gridTab'">
     <p class="accordian-header" (click)="setActiveTab('gridTab')">
       Grid
-      <span class="accordian-icon">{{ activeTab() === 'gridTab' ? '-' : '+' }}</span>
+      <span class="accordian-icon">{{ activeTab() === 'gridTab' ? '▾' : '▸' }}</span>
     </p>
     <div class="accordian-body">
       <div class="input-group grid-toggle-group">
