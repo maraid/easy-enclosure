@@ -12,7 +12,7 @@ import type {
 import { EnclosureStateService, FeatureTarget } from '../../core/state/enclosure-state.service';
 
 type Surface = 'top' | 'bottom' | 'left' | 'right' | 'front' | 'back';
-type RenameableComponent = 'hole' | 'vent' | 'pcbMount' | 'internalWall' | 'cableClamp';
+type RenameableComponent = 'hole' | 'vent' | 'pcbMount' | 'pcbHole' | 'internalWall' | 'cableClamp';
 
 @Component({
   selector: 'app-params-form',
@@ -42,6 +42,7 @@ export class ParamsFormComponent {
         hole: 'holesTab',
         vent: 'ventsTab',
         pcbMount: 'pcbMountsTab',
+        pcbHole: 'pcbTab',
         internalWall: 'internalWallsTab',
         waterproof: 'waterproofingTab',
         wallMount: 'wallMountsTab',
@@ -74,6 +75,16 @@ export class ParamsFormComponent {
   isSelected(type: RenameableComponent, id: string): boolean {
     const feature = this.state.selectedFeature();
     return feature?.type === type && 'id' in feature && feature.id === id;
+  }
+
+  isPcbHoleSelected(pcbId: string): boolean {
+    const feature = this.state.selectedFeature();
+    if (feature?.type !== 'pcbHole') {
+      return false;
+    }
+    return this.params().pcbs.some(
+      (pcb) => pcb.id === pcbId && pcb.holes.some((hole) => hole.id === feature.id),
+    );
   }
 
   surfaceLabel(surface: Surface): string {
@@ -120,8 +131,112 @@ export class ParamsFormComponent {
   }
 
   updatePcb(patch: Partial<PCB>): void {
-    const pcb = this.params().pcb;
-    this.state.updateParam('pcb', { ...pcb, ...patch });
+    const current = this.params();
+    const pcbs = current.pcbs.map((pcb) => ({
+      ...pcb,
+      ...patch,
+    }));
+    this.state.patchParams({ pcbs });
+  }
+
+  updatePcbAt(id: string, patch: Partial<PCB>): void {
+    const current = this.params();
+    this.state.patchParams({
+      pcbs: current.pcbs.map((pcb) => (pcb.id === id ? { ...pcb, ...patch } : pcb)),
+    });
+  }
+
+  updatePcbField(id: string, key: string, value: number): void {
+    this.updatePcbAt(id, { [key]: value } as Partial<PCB>);
+  }
+
+  addPcb(): void {
+    const current = this.params();
+    const next = { ...current.pcbs[0], id: crypto.randomUUID(), x: 0, y: 0 };
+    this.state.patchParams({ pcbs: [...current.pcbs, next] });
+  }
+
+  removePcb(id: string): void {
+    const current = this.params();
+    const pcbs = current.pcbs.filter((pcb) => pcb.id !== id);
+    if (pcbs.length) {
+      this.state.patchParams({ pcbs });
+    }
+  }
+
+  copyPcb(id: string): void {
+    const current = this.params();
+    const pcb = current.pcbs.find((item) => item.id === id);
+
+    if (pcb) {
+      this.state.patchParams({
+        pcbs: [
+          ...current.pcbs,
+          {
+            ...pcb,
+            id: crypto.randomUUID(),
+            holes: pcb.holes.map((hole) => ({ ...hole, id: crypto.randomUUID() })),
+          },
+        ],
+      });
+    }
+  }
+
+  updatePcbHole(pcbId: string, holeId: string, patch: Partial<PCB['holes'][number]>): void {
+    const current = this.params();
+    const pcbs = current.pcbs.map((pcb) =>
+      pcb.id === pcbId
+        ? {
+            ...pcb,
+            holes: pcb.holes.map((hole) => (hole.id === holeId ? { ...hole, ...patch } : hole)),
+          }
+        : pcb,
+    );
+    this.state.patchParams({ pcbs });
+  }
+
+  removePcbHole(pcbId: string, holeId: string): void {
+    const current = this.params();
+    const pcbs = current.pcbs.map((pcb) =>
+      pcb.id === pcbId ? { ...pcb, holes: pcb.holes.filter((hole) => hole.id !== holeId) } : pcb,
+    );
+    this.state.patchParams({ pcbs });
+  }
+
+  copyPcbHole(pcbId: string, holeId: string): void {
+    const current = this.params();
+    const pcbs = current.pcbs.map((pcb) => {
+      if (pcb.id !== pcbId) {
+        return pcb;
+      }
+      const hole = pcb.holes.find((item) => item.id === holeId);
+      return hole ? { ...pcb, holes: [...pcb.holes, { ...hole, id: crypto.randomUUID() }] } : pcb;
+    });
+    this.state.patchParams({ pcbs });
+  }
+
+  addPcbHole(pcbId: string): void {
+    const current = this.params();
+    const pcbs = current.pcbs.map((pcb) =>
+      pcb.id === pcbId
+        ? {
+            ...pcb,
+            holes: [
+              ...pcb.holes,
+              {
+                id: crypto.randomUUID(),
+                x: 0,
+                y: 0,
+                diameter: 2,
+                mountEnabled: false,
+                mountOuterDiameter: 6,
+                mountScrewDiameter: 2,
+              },
+            ],
+          }
+        : pcb,
+    );
+    this.state.patchParams({ pcbs });
   }
 
   addHole(): void {
@@ -219,27 +334,39 @@ export class ParamsFormComponent {
   addPcbMount(): void {
     const current = this.params();
     const next: PCBMount = {
-      id: crypto.randomUUID(), name: `Mount ${current.pcbMounts.length + 1}`, surface: 'bottom',
-      x: 0, y: 0, height: 5, outerDiameter: 6, screwDiameter: 2,
+      id: crypto.randomUUID(),
+      name: `Mount ${current.pcbMounts.length + 1}`,
+      surface: 'bottom',
+      x: 0,
+      y: 0,
+      height: 5,
+      outerDiameter: 6,
+      screwDiameter: 2,
     };
     this.state.patchParams({ pcbMounts: [...current.pcbMounts, next] });
   }
 
   removePcbMount(id: string): void {
-    this.state.patchParams({ pcbMounts: this.params().pcbMounts.filter((mount) => mount.id !== id) });
+    this.state.patchParams({
+      pcbMounts: this.params().pcbMounts.filter((mount) => mount.id !== id),
+    });
   }
 
   copyPcbMount(id: string): void {
     const mount = this.params().pcbMounts.find((item) => item.id === id);
-    if (mount) this.state.patchParams({ pcbMounts: [...this.params().pcbMounts, { ...mount, id: crypto.randomUUID() }] });
+    if (mount)
+      this.state.patchParams({
+        pcbMounts: [...this.params().pcbMounts, { ...mount, id: crypto.randomUUID() }],
+      });
   }
 
   updatePcbMount(id: string, patch: Partial<PCBMount>): void {
     this.state.patchParams({
-      pcbMounts: this.params().pcbMounts.map((mount) => mount.id === id ? { ...mount, ...patch } : mount),
+      pcbMounts: this.params().pcbMounts.map((mount) =>
+        mount.id === id ? { ...mount, ...patch } : mount,
+      ),
     });
   }
-
 
   addCableClamp(): void {
     const current = this.params();

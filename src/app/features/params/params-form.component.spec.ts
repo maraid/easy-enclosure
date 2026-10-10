@@ -102,6 +102,37 @@ describe('ParamsFormComponent', () => {
     expect(state.params().pcbMounts.length).toBe(initialCount);
   });
 
+  it('updates only the selected PCB hole and removes it', () => {
+    const firstPcb = state.params().pcbs[0];
+    component.addPcb();
+    const secondPcb = state.params().pcbs[1];
+    component.addPcbHole(firstPcb.id);
+    const hole = state.params().pcbs[0].holes.at(-1)!;
+
+    component.updatePcbHole(firstPcb.id, hole.id, { x: 12, mountEnabled: true });
+
+    expect(state.params().pcbs[0].holes.at(-1)?.x).toBe(12);
+    expect(state.params().pcbs[0].holes.at(-1)?.mountEnabled).toBeTrue();
+    expect(state.params().pcbs[1]).toEqual(secondPcb);
+
+    component.removePcbHole(firstPcb.id, hole.id);
+    expect(state.params().pcbs[0].holes.some((item) => item.id === hole.id)).toBeFalse();
+  });
+
+  it('conditionally updates PCB hole mount dimensions', () => {
+    const pcb = state.params().pcbs[0];
+    component.addPcbHole(pcb.id);
+    const hole = state.params().pcbs[0].holes.at(-1)!;
+
+    expect(hole.mountEnabled).toBeFalse();
+    component.updatePcbHole(pcb.id, hole.id, { mountEnabled: true, mountOuterDiameter: 8, mountScrewDiameter: 3 });
+
+    const updatedHole = state.params().pcbs[0].holes.at(-1)!;
+    expect(updatedHole.mountEnabled).toBeTrue();
+    expect(updatedHole.mountOuterDiameter).toBe(8);
+    expect(updatedHole.mountScrewDiameter).toBe(3);
+  });
+
   it('applies waterproof and lid screw coupling rules', () => {
     component.onWaterproofChange(false);
     expect(state.params().waterProof).toBeFalse();

@@ -40,6 +40,16 @@ export type PCBMount = {
   screwDiameter: number;
 };
 
+export type PCBHole = {
+  id: string;
+  x: number;
+  y: number;
+  diameter: number;
+  mountEnabled: boolean;
+  mountOuterDiameter: number;
+  mountScrewDiameter: number;
+};
+
 export type CableClamp = {
   id: string;
   name?: string;
@@ -77,7 +87,7 @@ export type PCB = {
   width: number;
   length: number;
   surface: Surface;
-  screwOffset: number;
+  holes: PCBHole[];
   enabled: boolean;
   guides: boolean;
   guideThickness: number; // e.g. 1mm
@@ -118,7 +128,7 @@ export type Params = {
   lidScrewHeadDepth: number;
   boreHoleClearance: number;
   bossOuterDiameter: number;
-  pcb: PCB;
+  pcbs: PCB[];
 };
 
 export const DEFAULT_PARAMS: Params = {
@@ -210,16 +220,39 @@ export const DEFAULT_PARAMS: Params = {
   pcbMounts: [
     {
       surface: 'bottom',
-      id: 'mount1', x: 30, y: 24, height: 5, outerDiameter: 6, screwDiameter: 2,
+      id: 'mount1',
+      x: 30,
+      y: 24,
+      height: 5,
+      outerDiameter: 6,
+      screwDiameter: 2,
     },
     {
-      id: 'mount2', surface: 'bottom', x: -30, y: 24, height: 5, outerDiameter: 6, screwDiameter: 2,
+      id: 'mount2',
+      surface: 'bottom',
+      x: -30,
+      y: 24,
+      height: 5,
+      outerDiameter: 6,
+      screwDiameter: 2,
     },
     {
-      id: 'mount3', surface: 'bottom', x: -30, y: -24, height: 5, outerDiameter: 6, screwDiameter: 2,
+      id: 'mount3',
+      surface: 'bottom',
+      x: -30,
+      y: -24,
+      height: 5,
+      outerDiameter: 6,
+      screwDiameter: 2,
     },
     {
-      id: 'mount4', surface: 'bottom', x: 30, y: -24, height: 5, outerDiameter: 6, screwDiameter: 2,
+      id: 'mount4',
+      surface: 'bottom',
+      x: 30,
+      y: -24,
+      height: 5,
+      outerDiameter: 6,
+      screwDiameter: 2,
     },
   ],
   internalWalls: [
@@ -263,10 +296,60 @@ export const DEFAULT_PARAMS: Params = {
   lidScrewHeadDepth: 3,
   boreHoleClearance: 0.04,
   bossOuterDiameter: 6,
-  pcb: {
-    id: 'pcb', enabled: true, x: 0, y: 0, z: 10, width: 30, length: 40, surface: 'bottom',
-    screwOffset: 2, guides: true, guideClearance: 1.2, guideThickness: 2, guideInset: 0.1,
-  },
+  pcbs: [
+    {
+      id: 'pcb',
+      enabled: true,
+      x: 0,
+      y: 0,
+      z: 10,
+      width: 30,
+      length: 40,
+      surface: 'bottom',
+      holes: [
+        {
+          id: 'pcb-hole-1',
+          x: -13,
+          y: -18,
+          diameter: 2,
+          mountEnabled: true,
+          mountOuterDiameter: 6,
+          mountScrewDiameter: 2,
+        },
+        {
+          id: 'pcb-hole-2',
+          x: 13,
+          y: -18,
+          diameter: 2,
+          mountEnabled: true,
+          mountOuterDiameter: 6,
+          mountScrewDiameter: 2,
+        },
+        {
+          id: 'pcb-hole-3',
+          x: -13,
+          y: 18,
+          diameter: 2,
+          mountEnabled: true,
+          mountOuterDiameter: 6,
+          mountScrewDiameter: 2,
+        },
+        {
+          id: 'pcb-hole-4',
+          x: 13,
+          y: 18,
+          diameter: 2,
+          mountEnabled: true,
+          mountOuterDiameter: 6,
+          mountScrewDiameter: 2,
+        },
+      ],
+      guides: true,
+      guideClearance: 1.2,
+      guideThickness: 2,
+      guideInset: 0.1,
+    },
+  ],
 };
 
 export const cloneParams = (params: Params): Params => {

@@ -11,6 +11,7 @@ export type FeatureTarget = {
     | 'hole'
     | 'vent'
     | 'pcbMount'
+    | 'pcbHole'
     | 'internalWall'
     | 'waterproof'
     | 'wallMount'
@@ -47,7 +48,7 @@ export class EnclosureStateService {
 
       return {
         ...cloneParams(DEFAULT_PARAMS),
-        ...JSON.parse(saved),
+        ...(JSON.parse(saved) as Partial<Params>),
       };
     } catch {
       return cloneParams(DEFAULT_PARAMS);
@@ -92,7 +93,7 @@ export class EnclosureStateService {
       wallMounts: false,
       lidScrews: false,
       cableClamps: [],
-      pcb: { ...DEFAULT_PARAMS.pcb, enabled: false },
+      pcbs: current.pcbs.map((pcb) => ({ ...pcb, enabled: false })),
     }));
     this.selectedFeature.set(null);
   }

@@ -6,7 +6,7 @@ import { subtract } from '@jscad/modeling/src/operations/booleans';
 import { cuboid, cylinder } from '@jscad/modeling/src/primitives';
 import { Geom3 } from '@jscad/modeling/src/geometries/types';
 
-import { PCB } from '../params';
+import { PCB, PCBHole } from '../params';
 import { internalWall } from './internalwalls';
 
 const HEIGHT: number = 1;
@@ -51,39 +51,65 @@ const perfs = (width: number, length: number): Geom3 | null => {
   return translate([-width / 2, -length / 2, 0], union(holes));
 };
 
-const screwHole = (): Geom3 => {
+const screwHole = (diameter: number): Geom3 => {
   return cylinder({
     height: HEIGHT,
-    radius: SCREWHOLE_DIAMETER / 2,
+    radius: diameter / 2,
     segments: 20,
     center: [0, 0, HEIGHT / 2],
   });
 };
 
-const screwHoles = (width: number, length: number, screwOffset: number): Geom3 => {
-  const hole = screwHole();
-  const edgeX = width / 2 - screwOffset;
-  const edgeY = length / 2 - screwOffset;
+/** Geometry for one PCB hole, used by the renderer for picking/highlighting. */
+export const pcbHole = (diameter: number): Geom3 => screwHole(diameter);
+
+const screwHoles = (holes: PCBHole[]): Geom3 | null => {
+  if (!holes.length) return null;
+  return union(holes.map((h) => translate([h.x, h.y, 0], screwHole(h.diameter))));
+};
+
+export type PcbHoleMountParams = Pick<PCB, 'z' | 'holes'>;
+
+/** Mounts tied to a PCB hole, kept in the PCB's local coordinate system. */
+export const pcbHoleMounts = ({ z, holes }: PcbHoleMountParams): Geom3 => {
+  const enabledHoles = holes.filter((hole) => hole.mountEnabled);
+
   return union(
-    translate([-edgeX, -edgeY, 0], hole),
-    translate([-edgeX, edgeY, 0], hole),
-    translate([edgeX, -edgeY, 0], hole),
-    translate([edgeX, edgeY, 0], hole),
+    enabledHoles.map((hole) =>
+      translate(
+        [hole.x, hole.y, 0],
+        subtract(
+          cylinder({
+            height: z,
+            radius: hole.mountOuterDiameter / 2,
+            segments: 20,
+            center: [0, 0, z / 2],
+          }),
+          cylinder({
+            height: z,
+            radius: hole.mountScrewDiameter / 2,
+            segments: 20,
+            center: [0, 0, z / 2],
+          }),
+        ),
+      ),
+    ),
   );
 };
 
-type PcbGeometryParams = Pick<PCB, 'width' | 'length' | 'screwOffset'>;
+type PcbGeometryParams = Pick<PCB, 'width' | 'length' | 'holes'>;
 
-export const pcb = ({ width, length, screwOffset }: PcbGeometryParams) => {
+export const pcb = ({ width, length, holes: pcbHoles }: PcbGeometryParams) => {
   let geometry = cuboid({
     size: [width, length, HEIGHT],
     center: [0, 0, HEIGHT / 2],
   });
-  const holes = perfs(width, length);
-  if (holes) {
-    geometry = subtract(geometry, union(holes));
+  const perfHoles = perfs(width, length);
+  if (perfHoles) {
+    geometry = subtract(geometry, union(perfHoles));
   }
-  return subtract(geometry, screwHoles(width, length, screwOffset));
+  const screwHolesGeometry = screwHoles(pcbHoles);
+  return screwHolesGeometry ? subtract(geometry, screwHolesGeometry) : geometry;
 };
 
 export type PcbGuideStubParams = Pick<

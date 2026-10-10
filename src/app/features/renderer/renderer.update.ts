@@ -15,7 +15,14 @@ import { FeatureTarget } from '../../core/state/enclosure-state.service';
 import { Surface } from '../../core/enclosure';
 import { PCBMount, PCB, Hole, Vent, InternalWall, CableClamp, Params } from '../../core/params';
 import { pcbMount } from '../../core/enclosure/pcbmount';
-import { pcb, pcbGuideStub, PcbGuideStubParams } from '../../core/enclosure/pcb';
+import {
+  pcb,
+  pcbHole,
+  pcbGuideStub,
+  PcbGuideStubParams,
+  pcbHoleMounts,
+  PcbHoleMountParams,
+} from '../../core/enclosure/pcb';
 import { lid, LidParams, lidInsert, LidInsertParams } from '../../core/enclosure/lid';
 import { hole } from '../../core/enclosure/holes';
 import { vent } from '../../core/enclosure/vents';
@@ -463,7 +470,7 @@ class SealCutoutUpdater extends BaseComponentUpdater<Params> {
 class PcbUpdater extends BaseComponentUpdater<PCB> {
   constructor(item: PCB, params: Params) {
     super(item, params, pcb, 'pcb', {
-      toArgs: (o) => [{ width: o.width, length: o.length, screwOffset: o.screwOffset }],
+      toArgs: (o) => [{ width: o.width, length: o.length, holes: o.holes }],
       exportable: false,
       color: [0.2, 0.5, 0.5, 0.3],
     });
@@ -751,8 +758,31 @@ class PcbGuideUpdater extends BaseComponentUpdater<PCB> {
           guideInset: a.guideInset,
         },
       ],
-      group: `${params.pcb.id}-guides`,
+      group: `${item.id}-guides`,
       placementFn: (o) => ({ x: o.x, y: o.y, surface: o.surface }),
+    });
+  }
+}
+
+type PcbHoleMountArg = { pcb: PCB; hole: PCB['holes'][number] };
+
+class PcbHoleUpdater extends BaseComponentUpdater<PcbHoleMountArg> {
+  constructor(item: PcbHoleMountArg, params: Params) {
+    super(item, params, pcbHole, 'pcbHole', {
+      toArgs: (a) => [a.hole.diameter],
+      operation: 'subtract',
+      group: item.hole.id,
+      placementFn: (a) => ({ x: a.pcb.x + a.hole.x, y: a.pcb.y + a.hole.y, z: a.pcb.z, surface: 'plane' }),
+    });
+  }
+}
+
+class PcbHoleMountUpdater extends BaseComponentUpdater<PcbHoleMountArg> {
+  constructor(item: PcbHoleMountArg, params: Params) {
+    super(item, params, pcbHoleMounts, 'pcbHole', {
+      toArgs: (a): [PcbHoleMountParams] => [{ z: a.pcb.z, holes: [a.hole] }],
+      group: item.hole.id,
+      placementFn: (a) => ({ x: a.pcb.x, y: a.pcb.y, surface: a.pcb.surface }),
     });
   }
 }
@@ -816,7 +846,7 @@ export class ObjectUpdater {
       this.updateSingle('wallMount', WallMountUpdater, params, params);
     }
 
-    this.updatePCB(params.pcb, params);
+    this.updatePCBs(params.pcbs, params);
 
     this.updateSingle('base', BaseUpdater, params, params);
 
@@ -847,13 +877,24 @@ export class ObjectUpdater {
     this.combineShells();
   }
 
+  updatePCBs(pcbs: PCB[], params: Params): void {
+    pcbs.forEach((pcb) => this.updatePCB(pcb, params));
+  }
+
   updatePCB(pcb: PCB, params: Params): void {
     if (pcb.guides) {
-      this.updateSingle(`${params.pcb.id}-guide`, PcbGuideUpdater, pcb, params);
+      this.updateSingle(`${pcb.id}-guide`, PcbGuideUpdater, pcb, params);
     }
     if (pcb.enabled) {
       this.updateObjects([pcb], PcbUpdater, params);
     }
+    pcb.holes
+      .forEach((hole) => {
+        this.updateSingle(`${hole.id}-hole`, PcbHoleUpdater, { pcb, hole }, params);
+        if (hole.mountEnabled) {
+          this.updateSingle(hole.id, PcbHoleMountUpdater, { pcb, hole }, params);
+        }
+      });
   }
 
   updateMounts(mounts: PCBMount[], params: Params): void {

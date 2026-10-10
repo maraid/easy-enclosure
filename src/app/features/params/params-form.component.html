@@ -933,125 +933,124 @@
       <span class="accordian-icon">{{ activeTab() === 'pcbTab' ? '-' : '+' }}</span>
     </p>
     <div class="accordian-body">
-      <div class="input-group checkbox-group">
-        <label>Show</label>
-        <input
-          type="checkbox"
-          [checked]="params().pcb.enabled"
-          (change)="updatePcb({ enabled: $any($event.target).checked })"
-        />
-      </div>
-      <div class="input-group">
-        <label>Surface</label>
-        <select
-          [value]="params().pcb.surface || 'bottom'"
-          (change)="updatePcb({ surface: $any($event.target).value })"
-        >
-          @for (surface of surfaces; track surface) {
-            <option [value]="surface" [selected]="surface === (params().pcb.surface || 'bottom')">
-              {{ surfaceLabel(surface) }}
-            </option>
+      @for (board of params().pcbs; track board.id) {
+        <details class="sub-params pcb-entry" [id]="board.id" open>
+          <summary class="component-header">
+            <b class="component-name">{{ board.id }}</b>
+            <button
+              class="copy-btn"
+              type="button"
+              title="Duplicate component"
+              aria-label="Duplicate component"
+              (click)="copyPcb(board.id)"
+            >
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="8" y="8" width="11" height="11" rx="1" />
+                <path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" />
+              </svg>
+            </button>
+            <button class="remove-btn" type="button" (click)="removePcb(board.id)">X</button>
+          </summary>
+
+          <div class="input-group checkbox-group">
+            <label>Show</label>
+            <input type="checkbox" [checked]="board.enabled" (change)="updatePcbAt(board.id, { enabled: $any($event.target).checked })" />
+          </div>
+          <div class="input-group">
+            <label>Surface</label>
+            <select [value]="board.surface || 'bottom'" (change)="updatePcbAt(board.id, { surface: $any($event.target).value })">
+              @for (surface of surfaces; track surface) {
+                <option [value]="surface" [selected]="surface === (board.surface || 'bottom')">{{ surfaceLabel(surface) }}</option>
+              }
+            </select>
+          </div>
+          @for (field of [
+            { label: 'Width', key: 'width' }, { label: 'Length', key: 'length' },
+            { label: 'X', key: 'x' }, { label: 'Y', key: 'y' }, { label: 'Offset', key: 'z' }
+          ]; track field.key) {
+            <div class="input-group">
+              <label>{{ field.label }}</label>
+              <input type="number" [value]="$any(board)[field.key]" (keydown.enter)="$any($event.target).blur()" (blur)="updatePcbField(board.id, field.key, +$any($event.target).value)" />
+            </div>
           }
-        </select>
-      </div>
-      <div class="input-group">
-        <label>Width</label>
-        <input
-          type="number"
-          min="1"
-          step="1"
-          [value]="params().pcb.width"
-          (keydown.enter)="$any($event.target).blur()"
-          (blur)="updatePcb({ width: +$any($event.target).value })"
-        />
-      </div>
-      <div class="input-group">
-        <label>Length</label>
-        <input
-          type="number"
-          min="1"
-          step="1"
-          [value]="params().pcb.length"
-          (keydown.enter)="$any($event.target).blur()"
-          (blur)="updatePcb({ length: +$any($event.target).value })"
-        />
-      </div>
-      <div class="input-group">
-        <label>X</label>
-        <input
-          type="number"
-          [value]="params().pcb.x"
-          (keydown.enter)="$any($event.target).blur()"
-          (blur)="updatePcb({ x: +$any($event.target).value })"
-        />
-      </div>
-      <div class="input-group">
-        <label>Y</label>
-        <input
-          type="number"
-          [value]="params().pcb.y"
-          (keydown.enter)="$any($event.target).blur()"
-          (blur)="updatePcb({ y: +$any($event.target).value })"
-        />
-      </div>
-      <div class="input-group">
-        <label>Offset</label>
-        <input
-          type="number"
-          [value]="params().pcb.z"
-          (keydown.enter)="$any($event.target).blur()"
-          (blur)="updatePcb({ z: +$any($event.target).value })"
-        />
-      </div>
-      <div class="input-group">
-        <label>Screw Offset</label>
-        <input
-          type="number"
-          [value]="params().pcb.screwOffset"
-          (keydown.enter)="$any($event.target).blur()"
-          (blur)="updatePcb({ screwOffset: +$any($event.target).value })"
-        />
-      </div>
-      <div class="input-group checkbox-group">
-        <label>Guides</label>
-        <input
-          type="checkbox"
-          [checked]="params().pcb.guides"
-          (change)="updatePcb({ guides: $any($event.target).checked })"
-        />
-      </div>
-      @if (params().pcb.guides) {
-        <div class="input-group">
-          <label>Guide Thickness</label>
-          <input
-            type="number"
-            [value]="params().pcb.guideThickness"
-            (keydown.enter)="$any($event.target).blur()"
-            (blur)="updatePcb({ guideThickness: +$any($event.target).value })"
-          />
-        </div>
-        <div class="input-group">
-          <label>Guide Clearance</label>
-          <input
-            type="number"
-            [value]="params().pcb.guideClearance"
-            (keydown.enter)="$any($event.target).blur()"
-            (blur)="updatePcb({ guideClearance: +$any($event.target).value })"
-          />
-        </div>
-        <div class="input-group">
-          <label>Guide Inset</label>
-          <input
-            type="number"
-            [value]="params().pcb.guideInset"
-            (keydown.enter)="$any($event.target).blur()"
-            (blur)="updatePcb({ guideInset: +$any($event.target).value })"
-          />
-        </div>
+          <div class="input-group checkbox-group">
+            <label>Guides</label>
+            <input type="checkbox" [checked]="board.guides" (change)="updatePcbAt(board.id, { guides: $any($event.target).checked })" />
+          </div>
+          @if (board.guides) {
+            @for (field of [
+              { label: 'Guide Thickness', key: 'guideThickness' },
+              { label: 'Guide Clearance', key: 'guideClearance' },
+              { label: 'Guide Inset', key: 'guideInset' }
+            ]; track field.key) {
+              <div class="input-group">
+                <label>{{ field.label }}</label>
+                <input type="number" [value]="$any(board)[field.key]" (keydown.enter)="$any($event.target).blur()" (blur)="updatePcbField(board.id, field.key, +$any($event.target).value)" />
+              </div>
+            }
+          }
+
+          <details class="pcb-holes" [open]="isPcbHoleSelected(board.id)">
+            <summary>Holes ({{ board.holes.length }})</summary>
+            @for (pcbHole of board.holes; let holeIndex = $index; track pcbHole.id) {
+              <div
+                class="sub-params pcb-hole"
+                [id]="pcbHole.id"
+                [class.selected-feature]="isSelected('pcbHole', pcbHole.id)"
+              >
+                <div class="component-header">
+                  <b class="component-name">Hole {{ holeIndex + 1 }}</b>
+                  <button
+                    class="copy-btn"
+                    type="button"
+                    title="Duplicate component"
+                    aria-label="Duplicate component"
+                    (click)="copyPcbHole(board.id, pcbHole.id)"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <rect x="8" y="8" width="11" height="11" rx="1" />
+                      <path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3" />
+                    </svg>
+                  </button>
+                  @if (board.holes.length > 1) {
+                    <button class="remove-btn" type="button" (click)="removePcbHole(board.id, pcbHole.id)">X</button>
+                  }
+                </div>
+                <div class="input-group">
+                  <label>X</label>
+                  <input type="number" [value]="pcbHole.x" (keydown.enter)="$any($event.target).blur()" (blur)="updatePcbHole(board.id, pcbHole.id, { x: +$any($event.target).value })" />
+                </div>
+                <div class="input-group">
+                  <label>Y</label>
+                  <input type="number" [value]="pcbHole.y" (keydown.enter)="$any($event.target).blur()" (blur)="updatePcbHole(board.id, pcbHole.id, { y: +$any($event.target).value })" />
+                </div>
+                <div class="input-group">
+                  <label>Diameter</label>
+                  <input type="number" [value]="pcbHole.diameter" (keydown.enter)="$any($event.target).blur()" (blur)="updatePcbHole(board.id, pcbHole.id, { diameter: +$any($event.target).value })" />
+                </div>
+                <div class="input-group checkbox-group">
+                  <label>Mount</label>
+                  <input type="checkbox" [checked]="pcbHole.mountEnabled" (change)="updatePcbHole(board.id, pcbHole.id, { mountEnabled: $any($event.target).checked })" />
+                </div>
+                @if (pcbHole.mountEnabled) {
+                  <div class="input-group">
+                    <label>Mount Outer Diameter</label>
+                    <input type="number" [value]="pcbHole.mountOuterDiameter" (keydown.enter)="$any($event.target).blur()" (blur)="updatePcbHole(board.id, pcbHole.id, { mountOuterDiameter: +$any($event.target).value })" />
+                  </div>
+                  <div class="input-group">
+                    <label>Mount Screw Diameter</label>
+                    <input type="number" [value]="pcbHole.mountScrewDiameter" (keydown.enter)="$any($event.target).blur()" (blur)="updatePcbHole(board.id, pcbHole.id, { mountScrewDiameter: +$any($event.target).value })" />
+                  </div>
+                }
+              </div>
+            }
+            <button class="add-btn" type="button" (click)="addPcbHole(board.id)">ADD NEW HOLE</button>
+          </details>
+        </details>
       }
+      <button class="add-btn" type="button" (click)="addPcb()">ADD NEW PCB</button>
     </div>
   </div>
-
   <div class="accordian" [class.active]="activeTab() === 'gridTab'">
     <p class="accordian-header" (click)="setActiveTab('gridTab')">
       Grid

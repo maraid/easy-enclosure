@@ -212,6 +212,24 @@ label {
   color: var(--text-primary);
 }
 
+.pcb-holes {
+  margin: 12px 8px 0 0;
+  padding: 8px 0 0 10px;
+  border-top: 1px solid rgba(114, 141, 168, 0.25);
+}
+
+.pcb-holes summary {
+  margin-bottom: 8px;
+  color: var(--text-primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.pcb-hole {
+  margin: 8px 0 0;
+  padding-left: 8px;
+}
+
 .component-name {
   min-width: 0;
   overflow: hidden;
@@ -296,6 +314,21 @@ select:focus-visible {
   outline: none;
   border-color: var(--ui-primary);
   box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.pcb-entry > summary {
+  cursor: pointer;
+  list-style: none;
+}
+.pcb-entry > summary::-webkit-details-marker {
+  display: none;
+}
+.pcb-entry > summary::before {
+  content: '▸';
+  margin-right: 6px;
+}
+.pcb-entry[open] > summary::before {
+  content: '▾';
 }
 
 
