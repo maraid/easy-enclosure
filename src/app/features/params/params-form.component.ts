@@ -510,8 +510,16 @@ export class ParamsFormComponent {
   onWaterproofChange(checked: boolean): void {
     this.state.patchParams({
       waterProof: checked,
+      showLidInsert: checked ? true : this.params().showLidInsert,
       lidScrews: checked ? true : this.params().lidScrews,
     });
+  }
+
+  setLidInsertEnabled(enabled: boolean): void {
+    if (this.params().waterProof) {
+      return;
+    }
+    this.state.updateParam('showLidInsert', enabled);
   }
 
   onLidScrewsChange(checked: boolean): void {

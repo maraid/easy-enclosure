@@ -110,6 +110,7 @@ export type Params = {
   insertClearance: number;
   showLid: boolean;
   showBase: boolean;
+  showLidInsert: boolean;
   showGrid: boolean;
   gridSpacing: number;
   cornerRadius: number;
@@ -146,6 +147,7 @@ export const DEFAULT_PARAMS: Params = {
   insertClearance: 0.04,
   showLid: true,
   showBase: true,
+  showLidInsert: true,
   showGrid: true,
   gridSpacing: 10,
   cornerRadius: 3,

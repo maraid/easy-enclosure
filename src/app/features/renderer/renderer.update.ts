@@ -854,7 +854,9 @@ export class ObjectUpdater {
 
     this.updateSingle('lid', LidUpdater, params, params);
 
-    this.updateSingle('lid-insert', LidInsertUpdater, params, params);
+    if (params.showLidInsert) {
+      this.updateSingle('lid-insert', LidInsertUpdater, params, params);
+    }
 
     this.updateMounts(params.pcbMounts, params);
     this.updateInternalWalls(params.internalWalls, params);

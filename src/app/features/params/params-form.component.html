@@ -109,6 +109,23 @@
     </p>
     <div class="accordian-body">
       <div class="input-group">
+        <label [attr.title]="params().waterProof ? 'Lid Insert is required for waterproofing.' : null">
+          Lid Insert
+        </label>
+        <span
+          class="checkbox-tooltip"
+          [attr.data-tooltip]="params().waterProof ? 'Lid Insert is required for waterproofing.' : null"
+        >
+          <input
+            type="checkbox"
+            [checked]="params().showLidInsert"
+            [disabled]="params().waterProof"
+            (change)="setLidInsertEnabled($any($event.target).checked)"
+          />
+        </span>
+      </div>
+      @if (params().showLidInsert) {
+      <div class="input-group">
         <label>Insert Thickness</label>
         <input
           type="number"
@@ -141,6 +158,7 @@
           (blur)="setNumberParam('insertClearance', $any($event.target).value)"
         />
       </div>
+      }
     </div>
   </div>
 

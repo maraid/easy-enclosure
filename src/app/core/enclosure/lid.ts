@@ -57,7 +57,7 @@ export const lidInsert = ({
           length - wall * 2 - insertClearance * 2,
           insertHeight,
           insertThickness,
-          diameterMax / 2 + cornerRadius / 4 + wall / 2 + (sunkenLidScrewHeads ? wall : 0),
+          diameterMax / 2 + cornerRadius / 4 + (sunkenLidScrewHeads ? wall : 0),
         ),
       ),
     );

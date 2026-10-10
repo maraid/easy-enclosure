@@ -168,18 +168,6 @@ type RenderOptions = {
 
 type Vec3Tuple = [number, number, number];
 
-const vector3Add = (a: Vec3Tuple, b: Vec3Tuple): Vec3Tuple => [
-  a[0] + b[0],
-  a[1] + b[1],
-  a[2] + b[2],
-];
-
-const vector3Multiply = (a: Vec3Tuple, b: Vec3Tuple): Vec3Tuple => [
-  a[0] * b[0],
-  a[1] * b[1],
-  a[2] * b[2],
-];
-
 type SurfaceLabel = {
   name: 'Front' | 'Back' | 'Left' | 'Right' | 'Lid' | 'Bottom' | 'Seal';
   x: number;

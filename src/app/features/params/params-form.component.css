@@ -426,3 +426,31 @@ select:focus-visible {
     transform: translateY(0);
   }
 }
+.checkbox-tooltip {
+  position: relative;
+  display: inline-flex;
+}
+
+.checkbox-tooltip[data-tooltip]::after {
+  position: absolute;
+  z-index: 10;
+  left: 1.5rem;
+  top: 50%;
+  width: max-content;
+  max-width: 240px;
+  padding: 0.35rem 0.5rem;
+  border-radius: 4px;
+  background: #222;
+  color: #fff;
+  content: attr(data-tooltip);
+  font-size: 0.75rem;
+  line-height: 1.25;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition: opacity 120ms ease;
+}
+
+.checkbox-tooltip[data-tooltip]:hover::after {
+  opacity: 1;
+}
