@@ -17,7 +17,6 @@ import { PCBMount, PCB, Hole, Vent, InternalWall, CableClamp, Params } from '../
 import { pcbMount } from '../../core/enclosure/pcbmount';
 import {
   pcb,
-  pcbHole,
   pcbGuideStub,
   PcbGuideStubParams,
   pcbHoleMounts,
@@ -766,17 +765,6 @@ class PcbGuideUpdater extends BaseComponentUpdater<PCB> {
 
 type PcbHoleMountArg = { pcb: PCB; hole: PCB['holes'][number] };
 
-class PcbHoleUpdater extends BaseComponentUpdater<PcbHoleMountArg> {
-  constructor(item: PcbHoleMountArg, params: Params) {
-    super(item, params, pcbHole, 'pcbHole', {
-      toArgs: (a) => [a.hole.diameter],
-      operation: 'subtract',
-      group: item.hole.id,
-      placementFn: (a) => ({ x: a.pcb.x + a.hole.x, y: a.pcb.y + a.hole.y, z: a.pcb.z, surface: 'plane' }),
-    });
-  }
-}
-
 class PcbHoleMountUpdater extends BaseComponentUpdater<PcbHoleMountArg> {
   constructor(item: PcbHoleMountArg, params: Params) {
     super(item, params, pcbHoleMounts, 'pcbHole', {
@@ -889,12 +877,8 @@ export class ObjectUpdater {
       this.updateObjects([pcb], PcbUpdater, params);
     }
     pcb.holes
-      .forEach((hole) => {
-        this.updateSingle(`${hole.id}-hole`, PcbHoleUpdater, { pcb, hole }, params);
-        if (hole.mountEnabled) {
-          this.updateSingle(hole.id, PcbHoleMountUpdater, { pcb, hole }, params);
-        }
-      });
+      .filter((hole) => hole.mountEnabled)
+      .forEach((hole) => this.updateSingle(hole.id, PcbHoleMountUpdater, { pcb, hole }, params));
   }
 
   updateMounts(mounts: PCBMount[], params: Params): void {

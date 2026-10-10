@@ -542,4 +542,64 @@ export class ParamsFormComponent {
   nameInputSize(name: string | undefined, defaultName: string): number {
     return Math.max(1, this.displayName(name, defaultName).length);
   }
+
+  selectFeatureFromEditor(event: Event): void {
+    const target = event.target;
+    if (!(target instanceof Element)) {
+      return;
+    }
+
+    const entry = target.closest<HTMLElement>('[data-feature-type], [id].sub-params, [id].accordian');
+    if (!entry?.id) {
+      return;
+    }
+
+    const featureType = entry.dataset['featureType'] as FeatureTarget['type'] | undefined;
+    if (featureType) {
+      this.state.selectFeature({
+        id: entry.dataset['featureId'] ?? entry.id,
+        type: featureType,
+        group: entry.dataset['featureGroup'],
+      });
+      return;
+    }
+
+    const params = this.params();
+    if (entry.id === 'definition-base') {
+      this.state.selectFeature({ id: entry.id, type: 'base' });
+      return;
+    }
+    if (entry.id === 'definition-lid') {
+      this.state.selectFeature({ id: entry.id, type: 'lidInsert' });
+      return;
+    }
+    if (params.holes.some((item) => item.id === entry.id)) {
+      this.state.selectFeature({ id: entry.id, type: 'hole' });
+      return;
+    }
+    if (params.vents.some((item) => item.id === entry.id)) {
+      this.state.selectFeature({ id: entry.id, type: 'vent' });
+      return;
+    }
+    if (params.pcbMounts.some((item) => item.id === entry.id)) {
+      this.state.selectFeature({ id: entry.id, type: 'pcbMount' });
+      return;
+    }
+    if (params.internalWalls.some((item) => item.id === entry.id)) {
+      this.state.selectFeature({ id: entry.id, type: 'internalWall' });
+      return;
+    }
+    if (params.cableClamps.some((item) => item.id === entry.id)) {
+      this.state.selectFeature({ id: entry.id, type: 'cableClamp' });
+      return;
+    }
+    const pcb = params.pcbs.find((item) => item.id === entry.id);
+    if (pcb) {
+      this.state.selectFeature({ id: pcb.id, type: 'pcb' });
+      return;
+    }
+    if (params.pcbs.some((pcb) => pcb.holes.some((hole) => hole.id === entry.id))) {
+      this.state.selectFeature({ id: entry.id, type: 'pcbHole' });
+    }
+  }
 }

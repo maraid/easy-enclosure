@@ -286,6 +286,11 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
       const currentParams = this.state.params();
       this.scheduleModelRender(currentParams);
     });
+
+    effect(() => {
+      this.state.selectedFeature();
+      this.refreshRenderEntities();
+    });
   }
 
   ngAfterViewInit(): void {
@@ -345,10 +350,6 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
         const m = params.pcbMounts.find((m) => m.id === feature.id);
         return { x: m?.x ?? 0, y: m?.y ?? 0, z: 0 }; // PCBMount has no z either
       }
-      case 'pcbHole': {
-        const hole = params.pcbs.flatMap((pcb) => pcb.holes).find((hole) => hole.id === feature.id);
-        return { x: hole?.x ?? 0, y: hole?.y ?? 0, z: 0 };
-      }
       case 'internalWall': {
         const w = params.internalWalls.find((w) => w.id === feature.id);
         return { x: w?.x ?? 0, y: w?.y ?? 0, z: 0 };
@@ -386,19 +387,6 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
         this.state.updateParam(
           'pcbMounts',
           params.pcbMounts.map((m) => (m.id === feature.id ? { ...m, [axis]: value } : m)),
-        );
-        return;
-
-      case 'pcbHole':
-        if (axis === 'z') return;
-        this.state.updateParam(
-          'pcbs',
-          params.pcbs.map((pcb) => ({
-            ...pcb,
-            holes: pcb.holes.map((hole) =>
-              hole.id === feature.id ? { ...hole, [axis]: value } : hole,
-            ),
-          })),
         );
         return;
 
@@ -479,10 +467,6 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
         return params.holes.find((h) => h.id === feature.id);
       case 'pcbMount':
         return params.pcbMounts.find((m) => m.id === feature.id);
-      case 'pcbHole':
-        return params.pcbs.flatMap((pcb) => pcb.holes).find((hole) => hole.id === feature.id)
-          ? params.pcbs.find((pcb) => pcb.holes.some((hole) => hole.id === feature.id))
-          : undefined;
       case 'internalWall':
         return params.internalWalls.find((w) => w.id === feature.id);
       case 'cableClamp':
@@ -502,17 +486,6 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
     const item = this.findFeatureItem(feature); // same lookup as getFeatureCoords, returns the raw object for its surface
     const surface = item?.surface ?? 'bottom';
     const origin: Origin = surface === 'top' ? 'lid' : 'base'; // matches HoleUpdater's own origin logic
-    if (feature.type === 'pcbHole') {
-      const pcb = params.pcbs.find((board) => board.holes.some((hole) => hole.id === feature.id));
-      return this.placer.pointFor(
-        (pcb?.x ?? 0) + coords.x,
-        (pcb?.y ?? 0) + coords.y,
-        pcb?.z ?? coords.z,
-        'plane',
-        origin,
-        params,
-      );
-    }
     return this.placer.pointFor(coords.x, coords.y, coords.z, surface, origin, params);
   }
 
@@ -1219,10 +1192,10 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
   private refreshRenderEntities(): void {
     if (!this.renderOptions) return;
 
-    const hovered = this.hoveredFeature;
-    const matches = hovered
+    const feature = this.hoveredFeature ?? this.state.selectedFeature();
+    const matches = feature
       ? this.featureCandidates.filter((c) =>
-          hovered.group ? c.group === hovered.group : c.id === hovered.id,
+          feature.group ? c.group === feature.group : c.id === feature.id,
         )
       : [];
 

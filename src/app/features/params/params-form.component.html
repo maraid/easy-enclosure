@@ -1,4 +1,9 @@
-<form id="param-form" (submit)="$event.preventDefault()">
+<form
+  id="param-form"
+  (submit)="$event.preventDefault()"
+  (click)="selectFeatureFromEditor($event)"
+  (focusin)="selectFeatureFromEditor($event)"
+>
   <div style="display: flex; gap: 8px; width: 100%">
     <button type="button" class="simple-reset-btn" (click)="resetToSimpleEnclosure()">
       START FROM SCRATCH
@@ -9,7 +14,7 @@
     </button>
   </div>
 
-  <div id="definition-base" class="accordian" [class.active]="activeTab() === 'generalTab'">
+  <div id="definition-base" data-feature-id="base" data-feature-type="base" class="accordian" [class.active]="activeTab() === 'generalTab'">
     <p class="accordian-header" (click)="setActiveTab('generalTab')">
       General
       <span class="accordian-icon">{{ activeTab() === 'generalTab' ? '-' : '+' }}</span>
@@ -88,7 +93,7 @@
     </div>
   </div>
 
-  <div id="definition-lid" class="accordian" [class.active]="activeTab() === 'lidInsertTab'">
+  <div id="definition-lid" data-feature-id="lid-insert" data-feature-type="lidInsert" class="accordian" [class.active]="activeTab() === 'lidInsertTab'">
     <p class="accordian-header" (click)="setActiveTab('lidInsertTab')">
       Lid Insert
       <span class="accordian-icon">{{ activeTab() === 'lidInsertTab' ? '-' : '+' }}</span>
@@ -752,6 +757,7 @@
 
   <div
     id="definition-waterproof"
+    data-feature-id="seal" data-feature-type="waterproof"
     class="accordian"
     [class.active]="activeTab() === 'waterproofingTab'"
   >
@@ -785,7 +791,7 @@
     </div>
   </div>
 
-  <div class="accordian" [class.active]="activeTab() === 'lidScrewsTab'">
+  <div id="definition-screwHoles" data-feature-id="lid-screw-hole" data-feature-type="screwHole" data-feature-group="screwHoles" class="accordian" [class.active]="activeTab() === 'lidScrewsTab'">
     <p class="accordian-header" (click)="setActiveTab('lidScrewsTab')">
       Lid Screws
       <span class="accordian-icon">{{ activeTab() === 'lidScrewsTab' ? '-' : '+' }}</span>
@@ -886,7 +892,7 @@
     </div>
   </div>
 
-  <div id="definition-wallMount" class="accordian" [class.active]="activeTab() === 'wallMountsTab'">
+  <div id="definition-wallMount" data-feature-id="wallMount" data-feature-type="wallMount" class="accordian" [class.active]="activeTab() === 'wallMountsTab'">
     <p class="accordian-header" (click)="setActiveTab('wallMountsTab')">
       Wall Mounts
       <span class="accordian-icon">{{ activeTab() === 'wallMountsTab' ? '-' : '+' }}</span>
