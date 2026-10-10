@@ -353,6 +353,10 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
         const c = params.cableClamps.find((c) => c.id === feature.id);
         return { x: c?.x ?? 0, y: c?.y ?? 0, z: 0 };
       }
+      case 'vent': {
+        const v = params.vents.find((v) => v.id === feature.id);
+        return { x: v?.x ?? 0, y: v?.y ?? 0, z: 0 };
+      }
       case 'pcb':
         return { x: params.pcb.x, y: params.pcb.y, z: params.pcb.z };
       default:
@@ -393,6 +397,14 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
         this.state.updateParam(
           'cableClamps',
           params.cableClamps.map((c) => (c.id === feature.id ? { ...c, [axis]: value } : c)),
+        );
+        return;
+
+      case 'vent':
+        if (axis === 'z') return;
+        this.state.updateParam(
+          'vents',
+          params.vents.map((v) => (v.id === feature.id ? { ...v, [axis]: value } : v)),
         );
         return;
 
@@ -447,6 +459,8 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
         return params.internalWalls.find((w) => w.id === feature.id);
       case 'cableClamp':
         return params.cableClamps.find((c) => c.id === feature.id);
+      case 'vent':
+        return params.vents.find((v) => v.id === feature.id);
       case 'pcb':
         return params.pcb;
       default:
@@ -588,7 +602,7 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
   }
 
   private isDraggable(feature: FeatureTarget): boolean {
-    return ['pcbMount', 'hole', 'internalWall', 'cableClamp', 'pcb'].includes(feature.type);
+    return ['pcbMount', 'hole', 'internalWall', 'cableClamp', 'vent', 'pcb'].includes(feature.type);
   }
 
   // onPointerUp(event: PointerEvent): void {

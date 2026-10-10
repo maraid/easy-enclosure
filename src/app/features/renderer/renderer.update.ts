@@ -13,11 +13,12 @@ import { colorize } from '@jscad/modeling/src/colors';
 import { FeatureTarget } from '../../core/state/enclosure-state.service';
 
 import { Surface } from '../../core/enclosure';
-import { PCBMount, PCB, Hole, InternalWall, CableClamp, Params } from '../../core/params';
+import { PCBMount, PCB, Hole, Vent, InternalWall, CableClamp, Params } from '../../core/params';
 import { pcbMount } from '../../core/enclosure/pcbmount';
 import { pcb, pcbGuideStub, PcbGuideStubParams } from '../../core/enclosure/pcb';
 import { lid, LidParams, lidInsert, LidInsertParams } from '../../core/enclosure/lid';
 import { hole } from '../../core/enclosure/holes';
+import { vent } from '../../core/enclosure/vents';
 import { base } from '../../core/enclosure/base';
 import {
   waterProofSeal,
@@ -92,6 +93,11 @@ const PLACEMENT_PARAM_DEPS: (keyof Params)[] = [
 
 const SURFACE_ORIGIN: Partial<Record<Surface, Origin>> = {
   top: 'lid',
+  bottom: 'base',
+  left: 'base',
+  right: 'base',
+  front: 'base',
+  back: 'base',
 };
 
 const SPACING = 20;
@@ -136,9 +142,9 @@ export class Placer {
     this.origins[name] = strategy;
   }
 
-  place(geometry: Geom3, placement: Placement, params: Params): Geom3 {
+  place(geometry: Geom3, placement: Placement, params: Params): [Geom3, Origin] {
     const surface = placement.surface ?? 'bottom';
-    const origin = SURFACE_ORIGIN[surface] ?? placement.origin ?? 'base';
+    const origin: Origin = SURFACE_ORIGIN[surface] ?? placement.origin ?? 'base';
 
     let ret = this.placeOnSurface(geometry, placement, params);
 
@@ -149,7 +155,7 @@ export class Placer {
     ret = translate(strategy(params).translate, ret);
 
     ret = mirror({ normal: [1, 0, 0] }, ret);
-    return ret;
+    return [ret, origin];
   }
 
   private placeOnSurface(geometry: Geom3, placement: Placement, params: Params): Geom3 {
@@ -170,7 +176,7 @@ export class Placer {
     const innerWallThickness = waterProof ? wall * 2 + insertClearance * 2 + insertThickness : wall;
     const wallX = width / 2;
     const wallY = length / 2;
-    const wallZ = height / 2;
+    const wallZ = floor + height / 2;
 
     const spun = rotation ? rotateZ(degToRad(rotation), geometry) : geometry;
 
@@ -284,7 +290,7 @@ abstract class BaseComponentUpdater<T = any> {
   private color: [number, number, number, number] | null = null;
   public type: FeatureTarget['type'] = 'base';
   public readonly exportable: boolean;
-  public readonly origin: Origin;
+  public origin: Origin;
   public readonly operation: Operation;
   public readonly group?: string;
   private readonly toArgs: (obj: T, params: Params) => unknown[];
@@ -354,7 +360,7 @@ abstract class BaseComponentUpdater<T = any> {
     const newKey = `${JSON.stringify(fields)}::${paramsKey}`;
 
     if (this.m_placedGeometry === null || this.m_placementKey !== newKey) {
-      this.m_placedGeometry = placer.place(
+      [this.m_placedGeometry, this.origin] = placer.place(
         this.m_geometry,
         { ...fields, origin: this.origin },
         params,
@@ -516,7 +522,32 @@ class HoleUpdater extends BaseComponentUpdater<Hole> {
           width: hole.width,
           length: hole.length,
           surface: hole.surface,
+          rounded: hole.rounded,
+          cornerRadius: hole.cornerRadius,
         },
+      ],
+    });
+  }
+}
+
+class VentUpdater extends BaseComponentUpdater<Vent> {
+  constructor(item: Vent, params: Params) {
+    const surfaceOrigin: Origin = item.surface === 'top' ? 'lid' : 'base';
+    super(item, params, vent, 'vent', {
+      origin: surfaceOrigin,
+      operation: 'subtract',
+      attachesToShell: true,
+      toArgs: (v, p) => [
+        {
+          floor: p.floor,
+          roof: p.roof,
+          wall: p.wall,
+          insertHeight: p.insertHeight,
+          insertThickness: p.insertThickness,
+          insertClearance: p.insertClearance,
+          waterProof: p.waterProof,
+        },
+        v,
       ],
     });
   }
@@ -747,8 +778,7 @@ export class ObjectUpdater {
   private shellPieces = new Map<Origin, { updater: BaseComponentUpdater; geom: Geom3 }[]>();
 
   private shellCuts = new Map<Origin, { updater: BaseComponentUpdater; geom: Geom3 }[]>();
-
-  private shellCache = new Map<Origin, { key: string; geometry: Geom3 }>();
+  private shellCache = new Map<BaseComponentUpdater, { key: string; geometry: Geom3 }>();
 
   getModels(): Geom3[] {
     return this.models.map((entry) => entry.model);
@@ -811,6 +841,7 @@ export class ObjectUpdater {
     this.updateMounts(params.pcbMounts, params);
     this.updateInternalWalls(params.internalWalls, params);
     this.updateHoles(params.holes, params);
+    this.updateVents(params.vents, params);
     this.updateCableClamps(params.cableClamps, params);
 
     this.combineShells();
@@ -835,6 +866,10 @@ export class ObjectUpdater {
 
   updateHoles(holes: Hole[], params: Params): void {
     this.updateObjects(holes, HoleUpdater, params);
+  }
+
+  updateVents(vents: Vent[], params: Params): void {
+    this.updateObjects(vents, VentUpdater, params);
   }
 
   updateCableClamps(clamps: CableClamp[], params: Params): void {
@@ -916,42 +951,22 @@ export class ObjectUpdater {
     for (const origin of allOrigins) {
       const targets = this.shellPieces.get(origin) ?? [];
       const cuts = this.shellCuts.get(origin) ?? [];
-
       if (targets.length === 0) continue;
 
-      const combinedKey = [...targets, ...cuts]
-        .map((entry) => entry.updater.placementCacheKey())
-        .join('||');
-
-      const cached = this.shellCache.get(origin);
-
-      if (cached && cached.key === combinedKey) {
-        // We still need a ModelEntry so that the rest of the
-        // pipeline has the same metadata as a normal model.
-        //
-        // There may be multiple target pieces, so the cache
-        // represents the combined result for this origin.
-        const updater = targets[0].updater;
-
-        this.models.push({
-          model: cached.geometry,
-          origin,
-          type: updater.type,
-          updater,
-        });
-
-        continue;
-      }
-
-      const relevantCuts = cuts.map((c) => c.geom);
+      const cutsKey = cuts.map((c) => c.updater.placementCacheKey()).join('||');
 
       for (const target of targets) {
-        const geom = relevantCuts.length ? subtract(target.geom, ...relevantCuts) : target.geom;
+        const combinedKey = `${target.updater.placementCacheKey()}::${cutsKey}`;
+        const cached = this.shellCache.get(target.updater);
 
-        this.shellCache.set(origin, {
-          key: combinedKey,
-          geometry: geom,
-        });
+        let geom: Geom3;
+        if (cached && cached.key === combinedKey) {
+          geom = cached.geometry;
+        } else {
+          const relevantCuts = cuts.map((c) => c.geom);
+          geom = relevantCuts.length ? subtract(target.geom, ...relevantCuts) : target.geom;
+          this.shellCache.set(target.updater, { key: combinedKey, geometry: geom });
+        }
 
         this.models.push({
           model: geom,

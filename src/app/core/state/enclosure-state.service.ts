@@ -9,6 +9,7 @@ export type FeatureTarget = {
     | 'lid'
     | 'lidInsert'
     | 'hole'
+    | 'vent'
     | 'pcbMount'
     | 'internalWall'
     | 'waterproof'

@@ -10,6 +10,23 @@ export type Hole = {
   surface: Surface;
   x: number;
   y: number;
+  rounded: boolean;
+  cornerRadius: number;
+};
+
+export type Vent = {
+  id: string;
+  name?: string;
+  surface: Surface;
+  width: number;
+  length: number;
+  x: number;
+  y: number;
+  rotation: number;
+  rounded: boolean;
+  cornerRadius: number;
+  holeWidth: number;
+  supportWidth: number;
 };
 
 export type PCBMount = {
@@ -86,6 +103,7 @@ export type Params = {
   gridSpacing: number;
   cornerRadius: number;
   holes: Hole[];
+  vents: Vent[];
   pcbMounts: PCBMount[];
   internalWalls: InternalWall[];
   cableClamps: CableClamp[];
@@ -123,6 +141,7 @@ export const DEFAULT_PARAMS: Params = {
   holes: [
     {
       id: 'hole-1',
+      name: 'Input Hole',
       shape: 'circle',
       surface: 'front',
       diameter: 12.5,
@@ -130,16 +149,21 @@ export const DEFAULT_PARAMS: Params = {
       length: 10,
       x: 0,
       y: 0,
+      rounded: false,
+      cornerRadius: 2,
     },
     {
       id: 'hole-2',
       shape: 'square',
+      name: 'Input Hole',
       surface: 'left',
       diameter: 10,
       width: 12,
       length: 10,
       x: 0,
       y: 0,
+      rounded: true,
+      cornerRadius: 2,
     },
     {
       id: 'hole-3',
@@ -150,64 +174,52 @@ export const DEFAULT_PARAMS: Params = {
       diameter: 10,
       x: 0,
       y: 0,
+      rounded: false,
+      cornerRadius: 2,
     },
     {
       id: 'hole-4',
       shape: 'square',
+      name: 'Output Hole',
       surface: 'right',
       width: 12.5,
       length: 10,
       diameter: 10,
       x: 0,
       y: 0,
+      rounded: true,
+      cornerRadius: 2,
     },
+  ],
+  vents: [
     {
-      id: 'hole-5',
-      shape: 'square',
+      id: 'vent1',
+      name: 'vent1',
       surface: 'top',
-      width: 30,
-      length: 10,
-      diameter: 10,
+      width: 40,
+      length: 40,
       x: 0,
       y: 0,
+      rotation: 0,
+      rounded: true,
+      cornerRadius: 1,
+      holeWidth: 2,
+      supportWidth: 2,
     },
   ],
   pcbMounts: [
     {
-      id: 'mount1',
       surface: 'bottom',
-      x: 30,
-      y: 24,
-      height: 5,
-      outerDiameter: 6,
-      screwDiameter: 2,
+      id: 'mount1', x: 30, y: 24, height: 5, outerDiameter: 6, screwDiameter: 2,
     },
     {
-      id: 'mount2',
-      surface: 'bottom',
-      x: -30,
-      y: 24,
-      height: 5,
-      outerDiameter: 6,
-      screwDiameter: 2,
+      id: 'mount2', surface: 'bottom', x: -30, y: 24, height: 5, outerDiameter: 6, screwDiameter: 2,
     },
     {
-      id: 'mount3',
-      surface: 'bottom',
-      x: -30,
-      y: -24,
-      height: 5,
-      outerDiameter: 6,
-      screwDiameter: 2,
+      id: 'mount3', surface: 'bottom', x: -30, y: -24, height: 5, outerDiameter: 6, screwDiameter: 2,
     },
     {
-      id: 'mount4',
-      surface: 'bottom',
-      x: 30,
-      y: -24,
-      height: 5,
-      outerDiameter: 6,
-      screwDiameter: 2,
+      id: 'mount4', surface: 'bottom', x: 30, y: -24, height: 5, outerDiameter: 6, screwDiameter: 2,
     },
   ],
   internalWalls: [
@@ -252,19 +264,8 @@ export const DEFAULT_PARAMS: Params = {
   boreHoleClearance: 0.04,
   bossOuterDiameter: 6,
   pcb: {
-    id: 'pcb',
-    enabled: true,
-    x: 0,
-    y: 0,
-    z: 10,
-    width: 30,
-    length: 40,
-    surface: 'bottom',
-    screwOffset: 2,
-    guides: true,
-    guideClearance: 1.2,
-    guideThickness: 2,
-    guideInset: 0.1,
+    id: 'pcb', enabled: true, x: 0, y: 0, z: 10, width: 30, length: 40, surface: 'bottom',
+    screwOffset: 2, guides: true, guideClearance: 1.2, guideThickness: 2, guideInset: 0.1,
   },
 };
 

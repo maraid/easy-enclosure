@@ -1,10 +1,18 @@
 import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
 
-import type { Hole, InternalWall, PCBMount, Params, CableClamp, PCB } from '../../core/params';
+import type {
+  Hole,
+  InternalWall,
+  Params,
+  CableClamp,
+  PCB,
+  PCBMount,
+  Vent,
+} from '../../core/params';
 import { EnclosureStateService, FeatureTarget } from '../../core/state/enclosure-state.service';
 
 type Surface = 'top' | 'bottom' | 'left' | 'right' | 'front' | 'back';
-type RenameableComponent = 'hole' | 'pcbMount' | 'internalWall' | 'cableClamp';
+type RenameableComponent = 'hole' | 'vent' | 'pcbMount' | 'internalWall' | 'cableClamp';
 
 @Component({
   selector: 'app-params-form',
@@ -32,6 +40,7 @@ export class ParamsFormComponent {
         lid: 'generalTab',
         lidInsert: 'lidInsertTab',
         hole: 'holesTab',
+        vent: 'ventsTab',
         pcbMount: 'pcbMountsTab',
         internalWall: 'internalWallsTab',
         waterproof: 'waterproofingTab',
@@ -112,11 +121,7 @@ export class ParamsFormComponent {
 
   updatePcb(patch: Partial<PCB>): void {
     const pcb = this.params().pcb;
-
-    this.state.updateParam('pcb', {
-      ...pcb,
-      ...patch,
-    });
+    this.state.updateParam('pcb', { ...pcb, ...patch });
   }
 
   addHole(): void {
@@ -132,6 +137,8 @@ export class ParamsFormComponent {
       length: 10,
       y: current.width / 2,
       x: 6,
+      rounded: true,
+      cornerRadius: 2,
     };
 
     this.state.patchParams({
@@ -172,59 +179,67 @@ export class ParamsFormComponent {
     });
   }
 
-  addPcbMount(): void {
+  addVent(): void {
     const current = this.params();
-
-    const next: PCBMount = {
+    const next: Vent = {
       id: crypto.randomUUID(),
-      name: `Mount ${current.pcbMounts.length + 1}`,
-      surface: 'bottom',
+      name: `Vent ${current.vents.length + 1}`,
+      surface: 'top',
+      width: 30,
+      length: 20,
       x: 0,
       y: 0,
-      height: 5,
-      outerDiameter: 6,
-      screwDiameter: 2,
+      rotation: 0,
+      rounded: false,
+      cornerRadius: 0.5,
+      holeWidth: 2,
+      supportWidth: 2,
     };
+    this.state.patchParams({ vents: [...current.vents, next] });
+  }
 
+  removeVent(id: string): void {
+    this.state.patchParams({ vents: this.params().vents.filter((vent) => vent.id !== id) });
+  }
+
+  copyVent(id: string): void {
+    const vent = this.params().vents.find((item) => item.id === id);
+    if (vent)
+      this.state.patchParams({
+        vents: [...this.params().vents, { ...vent, id: crypto.randomUUID() }],
+      });
+  }
+
+  updateVent(id: string, patch: Partial<Vent>): void {
     this.state.patchParams({
-      pcbMounts: [...current.pcbMounts, next],
+      vents: this.params().vents.map((vent) => (vent.id === id ? { ...vent, ...patch } : vent)),
     });
+  }
+
+  addPcbMount(): void {
+    const current = this.params();
+    const next: PCBMount = {
+      id: crypto.randomUUID(), name: `Mount ${current.pcbMounts.length + 1}`, surface: 'bottom',
+      x: 0, y: 0, height: 5, outerDiameter: 6, screwDiameter: 2,
+    };
+    this.state.patchParams({ pcbMounts: [...current.pcbMounts, next] });
   }
 
   removePcbMount(id: string): void {
-    const current = this.params();
-
-    this.state.patchParams({
-      pcbMounts: current.pcbMounts.filter((mount) => mount.id !== id),
-    });
+    this.state.patchParams({ pcbMounts: this.params().pcbMounts.filter((mount) => mount.id !== id) });
   }
 
   copyPcbMount(id: string): void {
-    const current = this.params();
-    const mount = current.pcbMounts.find((mount) => mount.id === id);
-
-    if (mount) {
-      this.state.patchParams({
-        pcbMounts: [
-          ...current.pcbMounts,
-          {
-            ...mount,
-            id: crypto.randomUUID(),
-          },
-        ],
-      });
-    }
+    const mount = this.params().pcbMounts.find((item) => item.id === id);
+    if (mount) this.state.patchParams({ pcbMounts: [...this.params().pcbMounts, { ...mount, id: crypto.randomUUID() }] });
   }
 
   updatePcbMount(id: string, patch: Partial<PCBMount>): void {
-    const current = this.params();
-
     this.state.patchParams({
-      pcbMounts: current.pcbMounts.map((mount) =>
-        mount.id === id ? { ...mount, ...patch } : mount,
-      ),
+      pcbMounts: this.params().pcbMounts.map((mount) => mount.id === id ? { ...mount, ...patch } : mount),
     });
   }
+
 
   addCableClamp(): void {
     const current = this.params();
@@ -373,6 +388,9 @@ export class ParamsFormComponent {
     switch (type) {
       case 'hole':
         this.updateHole(id, { name });
+        break;
+      case 'vent':
+        this.updateVent(id, { name });
         break;
       case 'pcbMount':
         this.updatePcbMount(id, { name });
