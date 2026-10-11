@@ -187,9 +187,7 @@ export class ParamsFormComponent {
   removePcb(id: string): void {
     const current = this.params();
     const pcbs = current.pcbs.filter((pcb) => pcb.id !== id);
-    if (pcbs.length) {
-      this.state.patchParams({ pcbs });
-    }
+    this.state.patchParams({ pcbs });
   }
 
   copyPcb(id: string): void {

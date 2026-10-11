@@ -117,6 +117,17 @@ describe('ParamsFormComponent', () => {
 
     component.removePcbHole(firstPcb.id, hole.id);
     expect(state.params().pcbs[0].holes.some((item) => item.id === hole.id)).toBeFalse();
+
+    while (state.params().pcbs[0].holes.length) {
+      component.removePcbHole(firstPcb.id, state.params().pcbs[0].holes[0].id);
+    }
+    expect(state.params().pcbs[0].holes).toEqual([]);
+
+    component.removePcb(firstPcb.id);
+    expect(state.params().pcbs.some((item) => item.id === firstPcb.id)).toBeFalse();
+
+    component.removePcb(secondPcb.id);
+    expect(state.params().pcbs).toEqual([]);
   });
 
   it('conditionally updates PCB hole mount dimensions', () => {
