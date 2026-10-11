@@ -1031,7 +1031,7 @@
             }
           }
 
-          <details class="pcb-holes" [open]="isPcbHoleSelected(board.id)">
+          <details class="pcb-holes">
             <summary>Holes ({{ board.holes.length }})</summary>
             @for (pcbHole of board.holes; let holeIndex = $index; track pcbHole.id) {
               <div

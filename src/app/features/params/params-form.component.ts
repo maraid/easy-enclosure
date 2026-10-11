@@ -69,6 +69,10 @@ export class ParamsFormComponent {
             }
 
             entry.classList.remove('component-collapsed');
+            // Keep nested native <details> sections open after selection. Their
+            // open state must not be driven by hover selection, otherwise
+            // hovering another PCB collapses the previously opened holes list.
+            entry.closest('details')?.setAttribute('open', '');
             if (entry instanceof HTMLDetailsElement) {
               entry.open = true;
             }

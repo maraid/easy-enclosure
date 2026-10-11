@@ -676,7 +676,7 @@ class LidInsertUpdater extends BaseComponentUpdater<Params> {
           lidScrewHeadDiameter: p.lidScrewHeadDiameter,
         },
       ],
-      placementFn: () => ({ x: 0, y: 0, surface: 'plane' }),
+      placementFn: () => ({ x: 0, y: 0, surface: 'top' }),
     });
   }
 }
