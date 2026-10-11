@@ -128,6 +128,13 @@ describe('ParamsFormComponent', () => {
 
     component.removePcb(secondPcb.id);
     expect(state.params().pcbs).toEqual([]);
+
+    component.addPcb();
+    const recreatedPcb = state.params().pcbs[0];
+    expect(recreatedPcb.name).toBe('PCB 1');
+    expect(recreatedPcb.width).toBeGreaterThan(0);
+    expect(recreatedPcb.length).toBeGreaterThan(0);
+    expect(recreatedPcb.holes.length).toBeGreaterThan(0);
   });
 
   it('conditionally updates PCB hole mount dimensions', () => {

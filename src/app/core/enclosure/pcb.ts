@@ -60,9 +60,6 @@ const screwHole = (diameter: number): Geom3 => {
   });
 };
 
-/** Geometry for one PCB hole, used by the renderer for picking/highlighting. */
-export const pcbHole = (diameter: number): Geom3 => screwHole(diameter);
-
 const screwHoles = (holes: PCBHole[]): Geom3 | null => {
   if (!holes.length) return null;
   return union(holes.map((h) => translate([h.x, h.y, 0], screwHole(h.diameter))));
@@ -104,10 +101,10 @@ export const pcb = ({ width, length, holes: pcbHoles }: PcbGeometryParams) => {
     size: [width, length, HEIGHT],
     center: [0, 0, HEIGHT / 2],
   });
-  const perfHoles = perfs(width, length);
-  if (perfHoles) {
-    geometry = subtract(geometry, union(perfHoles));
-  }
+  // const perfHoles = perfs(width, length);
+  // if (perfHoles) {
+  //   geometry = subtract(geometry, union(perfHoles));
+  // }
   const screwHolesGeometry = screwHoles(pcbHoles);
   return screwHolesGeometry ? subtract(geometry, screwHolesGeometry) : geometry;
 };

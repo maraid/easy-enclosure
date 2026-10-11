@@ -9,6 +9,7 @@ import type {
   PCBMount,
   Vent,
 } from '../../core/params';
+import { DEFAULT_PARAMS } from '../../core/params';
 import { EnclosureStateService, FeatureTarget } from '../../core/state/enclosure-state.service';
 
 type Surface = 'top' | 'bottom' | 'left' | 'right' | 'front' | 'back';
@@ -119,6 +120,12 @@ export class ParamsFormComponent {
 
   setActiveTab(tab: string): void {
     const isClosing = this.activeTab() === tab;
+    // Keep the holes editor available while its fields are being edited. Form
+    // updates can recreate the list and otherwise make this section appear to
+    // collapse unexpectedly.
+    if (tab === 'holesTab' && isClosing) {
+      return;
+    }
     this.activeTab.set(isClosing ? null : tab);
     if (isClosing) {
       // The form click handler runs after this header handler and may reselect
@@ -180,7 +187,15 @@ export class ParamsFormComponent {
 
   addPcb(): void {
     const current = this.params();
-    const next = { ...current.pcbs[0], id: crypto.randomUUID(), name: `PCB ${current.pcbs.length + 1}`, x: 0, y: 0 };
+    const template = current.pcbs[0] ?? DEFAULT_PARAMS.pcbs[0];
+    const next = {
+      ...template,
+      id: crypto.randomUUID(),
+      name: `PCB ${current.pcbs.length + 1}`,
+      x: 0,
+      y: 0,
+      holes: template.holes.map((hole) => ({ ...hole, id: crypto.randomUUID() })),
+    };
     this.state.patchParams({ pcbs: [...current.pcbs, next] });
   }
 
