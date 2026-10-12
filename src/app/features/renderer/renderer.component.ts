@@ -9,6 +9,7 @@ import {
   signal,
   ViewChild,
 } from '@angular/core';
+import { DecimalPipe } from '@angular/common';
 import type { Geom3 } from '@jscad/modeling/src/geometries/types';
 import measureBoundingBox from '@jscad/modeling/src/measurements/measureBoundingBox';
 
@@ -198,8 +199,18 @@ type DragState = {
   unitsPerPixel: number;
 };
 
+type DragRuler = {
+  startX: number;
+  startY: number;
+  length: number;
+  angle: number;
+  axis: DragAxis;
+  delta: number;
+};
+
 @Component({
   selector: 'app-renderer',
+  imports: [DecimalPipe],
   changeDetection: ChangeDetectionStrategy.OnPush,
   host: {
     class: 'relative block h-full w-full overflow-hidden',
@@ -262,6 +273,7 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
   private wheelInteractionHandle: ReturnType<typeof setTimeout> | null = null;
 
   readonly surfaceLabels = signal<SurfaceLabel[]>([]);
+  readonly dragRuler = signal<DragRuler | null>(null);
 
   // Drag
   private drag: DragState | null = null;
@@ -449,6 +461,7 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
       unitsPerPixel: 1,
     };
     this.lastCommittedValue = null;
+    this.dragRuler.set(null);
   }
 
   private findFeatureItem(feature: FeatureTarget): { surface: Surface } | undefined {
@@ -564,7 +577,29 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
     this.lastCommittedValue = snapped;
 
     this.commitFeatureCoord(this.drag.feature, axis, snapped);
-    // this.updateDragLabel(event, axis, snapped);
+    this.updateDragRuler(axis, snapped);
+  }
+
+  private updateDragRuler(axis: DragAxis, value: number): void {
+    const container = this.containerRef?.nativeElement;
+    if (!container || !this.drag?.axisScreenDir) return;
+
+    const start = this.projectWorldToScreen(this.worldPointFor(this.drag.startValue), container);
+    const coords = { ...this.drag.startValue, [axis]: value };
+    const end = this.projectWorldToScreen(this.worldPointFor(coords), container);
+    if (!start || !end) return;
+
+    const deltaX = end[0] - start[0];
+    const deltaY = end[1] - start[1];
+    const length = Math.hypot(deltaX, deltaY);
+    this.dragRuler.set({
+      startX: start[0],
+      startY: start[1],
+      length,
+      angle: (Math.atan2(deltaY, deltaX) * 180) / Math.PI,
+      axis,
+      delta: value - this.drag.startValue[axis],
+    });
   }
 
   onPointerMove(event: PointerEvent): void {
@@ -598,6 +633,7 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
   onPointerUp(event: PointerEvent): void {
     if (this.drag) {
       this.drag = null;
+      this.dragRuler.set(null);
       this.state.endHistoryTransaction();
       // this.hideDragLabel();
       this.containerRef?.nativeElement.releasePointerCapture(event.pointerId);

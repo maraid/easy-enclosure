@@ -1,5 +1,29 @@
 <div id="jscad" #container class="absolute inset-0 h-full w-full">
   <div class="pointer-events-none absolute inset-0 select-none">
+    @if (dragRuler(); as ruler) {
+      <div
+        class="absolute left-0 top-0 h-0 origin-left border-t-2 border-sky-500/80"
+        [style.left.px]="ruler.startX"
+        [style.top.px]="ruler.startY"
+        [style.width.px]="ruler.length"
+        [style.transform]="'rotate(' + ruler.angle + 'deg)'"
+      >
+        <span
+          class="absolute -left-1 -top-2 h-3 w-3 rounded-full border-2 border-white bg-sky-500 shadow"
+        ></span>
+        <span
+          class="absolute left-1/2 top-1 whitespace-nowrap rounded bg-slate-900/85 px-2 py-1 text-[11px] font-semibold tabular-nums leading-tight text-white shadow"
+          [style.transform]="
+            'translateX(-50%) rotate(' + (ruler.angle > 90 || ruler.angle < -90 ? 180 : 0) + 'deg)'
+          "
+        >
+          {{ ruler.delta | number: '1.0-1' }} mm
+        </span>
+        <span
+          class="absolute right-0 -top-2 h-3 w-3 rounded-full border-2 border-white bg-sky-500 shadow"
+        ></span>
+      </div>
+    }
     @for (label of surfaceLabels(); track label.name) {
       <div
         class="absolute rounded-full border border-slate-200/80 bg-slate-900/70 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-white shadow-[0_6px_18px_rgba(15,23,42,0.35)]"
