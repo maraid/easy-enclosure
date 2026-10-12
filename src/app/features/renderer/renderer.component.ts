@@ -438,6 +438,7 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
   }
 
   private beginDrag(feature: FeatureTarget, event: PointerEvent): void {
+    this.state.beginHistoryTransaction();
     const current = this.getFeatureCoords(feature);
     this.drag = {
       feature,
@@ -523,6 +524,7 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
       if (candidates.length === 0) {
         // every axis is degenerate from this angle (e.g. dead-on view) — bail cleanly
         this.drag = null;
+        this.state.endHistoryTransaction();
         // this.hideDragLabel();
         return;
       }
@@ -596,6 +598,7 @@ export class RendererComponent implements AfterViewInit, OnDestroy {
   onPointerUp(event: PointerEvent): void {
     if (this.drag) {
       this.drag = null;
+      this.state.endHistoryTransaction();
       // this.hideDragLabel();
       this.containerRef?.nativeElement.releasePointerCapture(event.pointerId);
       return;
